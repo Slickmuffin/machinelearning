@@ -1,0 +1,93 @@
+# PPO Trading AI Configuration
+# Risk-aware continuous action PPO with proper GPU optimization
+
+# Training Configuration
+training:
+  num_envs: 16              # Parallel environments for vectorized rollouts
+  num_updates: 1000         # Total PPO updates
+  log_interval: 10          # Logging frequency
+  save_interval: 200        # Checkpoint save frequency
+  
+# Environment Configuration
+environment:
+  initial_balance: 10000.0
+  max_leverage: 125.0
+  maker_fee: 0.0002         # 0.02% maker fee
+  taker_fee: 0.0004         # 0.04% taker fee
+  funding_rate: 0.0001      # 0.01% per 8h funding
+  slippage_bp: 1.0          # 1 basis point slippage
+  vol_target: 0.15          # 15% volatility target
+  max_drawdown: 0.15        # 15% max drawdown kill switch
+  daily_loss_limit: 0.05    # 5% daily loss limit
+  
+# PPO Agent Configuration
+ppo:
+  # Network Architecture
+  hidden_size: 512          # MLP hidden dimension
+  recurrent_size: 128       # GRU/LSTM hidden size
+  
+  # PPO Hyperparameters
+  gamma: 0.99               # Discount factor
+  gae_lambda: 0.95          # GAE lambda
+  clip_epsilon: 0.15        # PPO clipping parameter
+  entropy_coef: 0.01        # Entropy regularization
+  value_loss_coef: 0.5      # Value function loss weight
+  max_grad_norm: 0.5        # Gradient clipping
+  
+  # Training Parameters
+  learning_rate: 0.0003     # Adam learning rate
+  ppo_epochs: 8             # PPO update epochs per rollout
+  minibatch_size: 2048      # Large GPU minibatch size
+  rollout_steps: 1024       # Steps per rollout
+  
+  # GPU Optimization
+  use_amp: true             # Automatic Mixed Precision
+  device: "cuda"            # Device (cuda/cpu)
+  
+# Data Configuration
+data:
+  source: "gs://YOUR_GCP_PROJECT-training-data/btc_comprehensive_dataset_20250812_125933_features.csv"
+  validation_split: 0.2     # Validation data fraction
+  embargo_days: 1           # Embargo period to prevent leakage
+  
+# Vertex AI Configuration
+vertex_ai:
+  project_id: "YOUR_GCP_PROJECT"
+  region: "us-central1"
+  machine_type: "n1-standard-8"
+  accelerator_type: "NVIDIA_TESLA_T4"
+  accelerator_count: 1
+  disk_size_gb: 100
+  
+# Risk Management
+risk:
+  max_position: 1.0         # Maximum position size (full leverage)
+  position_sizing: "volatility_target"  # Position sizing method
+  stop_loss: 0.05           # 5% stop loss
+  take_profit: 0.10         # 10% take profit
+  risk_per_trade: 0.02      # 2% risk per trade
+  
+# Evaluation
+evaluation:
+  metrics:
+    - "sharpe_ratio"
+    - "sortino_ratio"
+    - "max_drawdown"
+    - "calmar_ratio"
+    - "total_return"
+    - "win_rate"
+    - "profit_factor"
+    - "var_95"
+    - "cvar_95"
+  
+  benchmarks:
+    - "buy_and_hold"
+    - "momentum"
+    - "mean_reversion"
+    
+  stress_tests:
+    - "crash_2020"
+    - "pump_2021"
+    - "chop_2022"
+    - "fee_sensitivity"
+    - "funding_sensitivity"
