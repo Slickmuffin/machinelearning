@@ -44,7 +44,7 @@ class DailySwingConfig:
     n_models: int = 8
     n_estimators: int = 1000     # Friend recommended: use fixed trees, no early stop in final
     eta: float = 0.01
-    early_stopping_rounds: int = 10
+    early_stopping_rounds: int = 200  # Friend's recommended safe default
 
     # Cost-aware policy - Friend's specific recommendations
     delta_bps: float = 1.5       # Friend: consider 1.5-3.0 bps (was 1.0)
@@ -245,8 +245,14 @@ class XGBoostEnsemble:
             'n_jobs': -1,
             'base_score': 0.5,  # Required for XGBoost 3.0+
             'eval_metric': 'logloss',
-            'early_stopping_rounds': 10  # Research suggests 10 for financial data
+            'early_stopping_rounds': self.config.early_stopping_rounds
         }
+
+        # Disable early stopping for tiny datasets (as per friend's feedback)
+        if len(df) < 200:
+            params.pop('early_stopping_rounds', None)
+            params['n_estimators'] = max(params.get('n_estimators', 500), 500)
+            self.logger.info(f"⚠️ Small dataset ({len(df)} samples) - disabled early stopping, using {params['n_estimators']} trees")
 
         # Train with research-backed configuration
         import time
@@ -593,11 +599,10 @@ class DailySwingTrader:
             final_df = self.labeler.create_labels(with_features)
             self.logger.info(f"🎯 Added labels: {len(final_df)} samples")
 
-            # STRICT validation for proper ML training (as per friend's feedback)
+            # HARD FAIL on insufficient data (as per friend's feedback)
             min_training_samples = 500  # Require minimum for serious training
             if len(final_df) < min_training_samples:
-                self.logger.warning(f"⚠️ INSUFFICIENT DATA: {len(final_df)} samples (need {min_training_samples}+ for reliable training)")
-                self.logger.warning(f"⚠️ Proceeding with limited data - expect poor performance")
+                raise ValueError(f"Not enough daily samples: {len(final_df)} (need ≥{min_training_samples})")
 
             self.logger.info(f"✅ Data prepared: {len(final_df)} daily samples")
             return final_df
@@ -686,6 +691,27 @@ class DailySwingTrader:
 
         # Train models
         self.train_models(train_df)
+
+        # Training validation (as per friend's feedback - prevent silent "success")
+        import numpy as np
+        training_metrics = {
+            "train_rows": int(len(train_df)),
+            "val_rows": int(len(test_df)),
+            "n_models_trained": int(len(self.ensemble.models)),
+            "mean_best_iter": float(np.mean([m.get("best_iter", 0) for m in self.ensemble.models])),
+        }
+
+        self.logger.info(f"📊 Training validation metrics: {training_metrics}")
+
+        # Hard assertions to prevent silent failures
+        try:
+            assert training_metrics["train_rows"] >= 500, f"Insufficient training data: {training_metrics['train_rows']} < 500"
+            assert training_metrics["n_models_trained"] >= 4, f"Too few models trained: {training_metrics['n_models_trained']} < 4"
+            assert training_metrics["mean_best_iter"] >= 100, f"Models didn't learn: avg best_iter={training_metrics['mean_best_iter']} < 100"
+            self.logger.info("✅ Training validation passed - models actually learned")
+        except AssertionError as e:
+            self.logger.error(f"❌ Training validation failed: {str(e)}")
+            raise
 
         # Backtest
         ledger, metrics = self.backtester.run_backtest(test_df, self.ensemble, self.policy)

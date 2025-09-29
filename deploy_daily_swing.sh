@@ -301,10 +301,10 @@ workerPoolSpecs:
           # Download real data first
           gsutil cp gs://YOUR_GCP_PROJECT-vertex-training/btc_v2_binance_1h_20250819_093151.csv /tmp/btc_data.csv
 
-          # Run the actual training pipeline with proper CLI
+          # Run the actual training pipeline with safe parameters (as per friend's feedback)
           python3 daily_swing_trader.py \
             --data=/tmp/btc_data.csv \
-            --config_json='{"n_models":4,"n_estimators":50,"eta":0.3,"early_stopping_rounds":100}'
+            --config_json='{"n_models":8,"n_estimators":1500,"eta":0.01,"early_stopping_rounds":200}'
 
           echo "✅ DAILY SWING TRADING COMPLETE"
 EOF
