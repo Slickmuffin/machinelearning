@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/YOUR_GCP_PROJECT/entrypoint-fixed:20251006-211500', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/YOUR_GCP_PROJECT/entrypoint-fixed:20251006-211500']
+images: ['gcr.io/YOUR_GCP_PROJECT/entrypoint-fixed:20251006-211500']
+timeout: 600s

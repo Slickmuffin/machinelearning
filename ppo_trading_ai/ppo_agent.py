@@ -378,7 +378,7 @@ class PPOAgent:
                 if mean_abs_adv < 0.001 and mean_turnover > 0.2:
                     logger.warning(f"🚨 TRIPWIRE WARNING: Collapsed advantages ({mean_abs_adv:.6f}) with high turnover ({mean_turnover:.3f})")
                     
-            logger.info(f"📊 TRIPWIRE STATUS: Cost ratio={np.mean(cost_ratios):.6f}, Bankrupts={bankrupt_count}/{total_envs}, Adv={torch.mean(torch.abs(advantages)).item():.6f}")
+            logger.debug(f"📊 TRIPWIRE STATUS: Cost ratio={np.mean(cost_ratios) if cost_ratios else 0:.6f}, Bankrupts={bankrupt_count}/{total_envs}, Adv={torch.mean(torch.abs(advantages)).item():.6f}")
         
         
         # Validate buffer contents before update
@@ -558,15 +558,16 @@ class PPOAgent:
                         # Value loss separate  
                         value_total_loss = self.config.value_loss_coef * value_loss
                         
-                        # Detailed tensor logging for debugging divergence points
-                        logger.info(f"📊 TENSOR STATS - Epoch {epoch}")
-                        logger.info(f"   action_mean: min={action_mean.min():.6f}, max={action_mean.max():.6f}, mean={action_mean.mean():.6f}")
-                        logger.info(f"   action_std: min={action_std.min():.6f}, max={action_std.max():.6f}, mean={action_std.mean():.6f}")
-                        logger.info(f"   log_probs: min={log_probs.min():.6f}, max={log_probs.max():.6f}, mean={log_probs.mean():.6f}")
-                        logger.info(f"   advantages: min={advantages.min():.6f}, max={advantages.max():.6f}, mean={advantages.mean():.6f}")
-                        logger.info(f"   returns: min={batch['returns'].min():.6f}, max={batch['returns'].max():.6f}, mean={batch['returns'].mean():.6f}")
-                        logger.info(f"   ratio: min={ratio.min():.6f}, max={ratio.max():.6f}, mean={ratio.mean():.6f}")
-                        logger.info(f"   losses: policy={policy_loss:.6f}, value={value_loss:.6f}, policy_total={policy_total_loss:.6f}, value_total={value_total_loss:.6f}")
+                        # Detailed tensor logging only on first epoch to avoid spam
+                        if epoch == 0 and start_idx == 0:
+                            logger.debug(f"📊 TENSOR STATS - Epoch {epoch}")
+                            logger.debug(f"   action_mean: min={action_mean.min():.6f}, max={action_mean.max():.6f}, mean={action_mean.mean():.6f}")
+                            logger.debug(f"   action_std: min={action_std.min():.6f}, max={action_std.max():.6f}, mean={action_std.mean():.6f}")
+                            logger.debug(f"   log_probs: min={log_probs.min():.6f}, max={log_probs.max():.6f}, mean={log_probs.mean():.6f}")
+                            logger.debug(f"   advantages: min={advantages.min():.6f}, max={advantages.max():.6f}, mean={advantages.mean():.6f}")
+                            logger.debug(f"   returns: min={batch['returns'].min():.6f}, max={batch['returns'].max():.6f}, mean={batch['returns'].mean():.6f}")
+                            logger.debug(f"   ratio: min={ratio.min():.6f}, max={ratio.max():.6f}, mean={ratio.mean():.6f}")
+                            logger.debug(f"   losses: policy={policy_loss:.6f}, value={value_loss:.6f}, policy_total={policy_total_loss:.6f}, value_total={value_total_loss:.6f}")
                     
                     # SENIOR DEV FIX #6: Combined backward pass to avoid gradient conflicts (AMP)
                     # Zero all gradients
@@ -670,15 +671,16 @@ class PPOAgent:
                     # Value loss separate  
                     value_total_loss = self.config.value_loss_coef * value_loss
                     
-                    # Detailed tensor logging for debugging divergence points  
-                    logger.info(f"📊 TENSOR STATS - Epoch {epoch}")
-                    logger.info(f"   action_mean: min={action_mean.min():.6f}, max={action_mean.max():.6f}, mean={action_mean.mean():.6f}")
-                    logger.info(f"   action_std: min={action_std.min():.6f}, max={action_std.max():.6f}, mean={action_std.mean():.6f}")
-                    logger.info(f"   log_probs: min={log_probs.min():.6f}, max={log_probs.max():.6f}, mean={log_probs.mean():.6f}")
-                    logger.info(f"   advantages: min={advantages.min():.6f}, max={advantages.max():.6f}, mean={advantages.mean():.6f}")
-                    logger.info(f"   returns: min={batch['returns'].min():.6f}, max={batch['returns'].max():.6f}, mean={batch['returns'].mean():.6f}")
-                    logger.info(f"   ratio: min={ratio.min():.6f}, max={ratio.max():.6f}, mean={ratio.mean():.6f}")
-                    logger.info(f"   losses: policy={policy_loss:.6f}, value={value_loss:.6f}, policy_total={policy_total_loss:.6f}, value_total={value_total_loss:.6f}")
+                    # Detailed tensor logging only on first epoch to avoid spam
+                    if epoch == 0 and start_idx == 0:
+                        logger.debug(f"📊 TENSOR STATS - Epoch {epoch}")
+                        logger.debug(f"   action_mean: min={action_mean.min():.6f}, max={action_mean.max():.6f}, mean={action_mean.mean():.6f}")
+                        logger.debug(f"   action_std: min={action_std.min():.6f}, max={action_std.max():.6f}, mean={action_std.mean():.6f}")
+                        logger.debug(f"   log_probs: min={log_probs.min():.6f}, max={log_probs.max():.6f}, mean={log_probs.mean():.6f}")
+                        logger.debug(f"   advantages: min={advantages.min():.6f}, max={advantages.max():.6f}, mean={advantages.mean():.6f}")
+                        logger.debug(f"   returns: min={batch['returns'].min():.6f}, max={batch['returns'].max():.6f}, mean={batch['returns'].mean():.6f}")
+                        logger.debug(f"   ratio: min={ratio.min():.6f}, max={ratio.max():.6f}, mean={ratio.mean():.6f}")
+                        logger.debug(f"   losses: policy={policy_loss:.6f}, value={value_loss:.6f}, policy_total={policy_total_loss:.6f}, value_total={value_total_loss:.6f}")
                     
                     # SENIOR DEV FIX #6: Combined backward pass to avoid gradient conflicts
                     # Zero all gradients

@@ -1,36 +1,39 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "🚀 DEPLOYING DAILY SWING TRADING SYSTEM"
-echo "======================================="
+echo "🚀 DEPLOYING 4-HOUR SWING TRADING SYSTEM"
+echo "========================================="
 
-# Create timestamp for unique job names
+# Create timestamp and code hash for unique job names (Friend's stale artifact prevention)
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-JOB_NAME="daily-swing-trader-${TIMESTAMP}"
-PACKAGE_NAME="daily_swing_${TIMESTAMP}.tar.gz"
+CODE_HASH=$(sha256sum /home/user/projects/machinelearning.1/daily_swing_trader.py | cut -c1-12)
+JOB_NAME="swing-trader-${TIMESTAMP}-${CODE_HASH}"
+PACKAGE_NAME="swing_trader_${TIMESTAMP}_${CODE_HASH}.tar.gz"
+
+echo "🧾 BUILD_ID=${CODE_HASH} | Package: ${PACKAGE_NAME}"
 
 # Create deployment package
 echo "📦 Creating deployment package..."
-cd /tmp && rm -rf daily_swing_package
-mkdir -p daily_swing_package
+cd /tmp && rm -rf swing_trader_package
+mkdir -p swing_trader_package
 
 # Copy core files
-cp /home/user/projects/machinelearning.1/daily_swing_trader.py daily_swing_package/
-cp -r /home/user/projects/machinelearning.1/ppo_trading_ai daily_swing_package/
+cp /home/user/projects/machinelearning.1/daily_swing_trader.py swing_trader_package/
+cp -r /home/user/projects/machinelearning.1/ppo_trading_ai swing_trader_package/
 
 # Create main execution script
-cat > daily_swing_package/run_daily_swing.py << 'EOF'
+cat > swing_trader_package/run_swing_trader.py << 'EOF'
 #!/usr/bin/env python3
 """
-Main execution script for daily swing trading system
+Main execution script for 4-hour swing trading system
 Downloads data and runs complete pipeline
 """
 
 import sys
 import os
-sys.path.insert(0, '/tmp/daily_swing_package')
+sys.path.insert(0, '/tmp/swing_trader_package')
 
-from daily_swing_trader import DailySwingTrader, DailySwingConfig
+from daily_swing_trader import SwingTrader, SwingConfig
 import pandas as pd
 import numpy as np
 import logging
@@ -117,7 +120,7 @@ def main():
 
     try:
         # Configuration for aggressive daily swing trading
-        config = DailySwingConfig(
+        config = SwingConfig(
             # Cost structure
             cost_bps_roundtrip=7.0,     # 7 bps total costs
             funding_rate_daily=0.03,    # 3 bps/day funding
@@ -143,7 +146,7 @@ def main():
         )
 
         # Create trader instance
-        trader = DailySwingTrader(config)
+        trader = SwingTrader(config)
 
         # Get REAL BTC data from project files
         logger.info("📊 Loading REAL BTC data from project...")
@@ -247,7 +250,7 @@ if __name__ == "__main__":
 EOF
 
 # Create requirements file
-cat > daily_swing_package/requirements.txt << 'EOF'
+cat > swing_trader_package/requirements.txt << 'EOF'
 pandas>=1.5.0
 numpy>=1.21.0
 scikit-learn>=1.0.0
@@ -257,7 +260,7 @@ EOF
 
 # Package everything
 echo "📦 Creating deployment package..."
-tar -czf ${PACKAGE_NAME} daily_swing_package/
+tar -czf ${PACKAGE_NAME} swing_trader_package/
 
 # Upload to cloud storage
 echo "☁️ Uploading to cloud storage..."
@@ -281,8 +284,8 @@ workerPoolSpecs:
         - -c
         - |
           set -euo pipefail
-          echo "🚀 DAILY SWING TRADING SYSTEM - VERTEX AI"
-          echo "========================================"
+          echo "🚀 4-HOUR SWING TRADING SYSTEM - VERTEX AI"
+          echo "=========================================="
 
           # Install dependencies
           pip3 install --no-cache-dir pandas numpy scikit-learn xgboost scipy
@@ -294,19 +297,26 @@ workerPoolSpecs:
           # Extract and run
           cd /tmp
           tar -xzf ${PACKAGE_NAME}
-          cd daily_swing_package
+          cd swing_trader_package
 
-          echo "🎯 Starting daily swing trading system..."
+          echo "🎯 Starting 4-hour swing trading system..."
 
           # Download real data first
           gsutil cp gs://YOUR_GCP_PROJECT-vertex-training/btc_v2_binance_1h_20250819_093151.csv /tmp/btc_data.csv
 
-          # Run the actual training pipeline with safe parameters (as per friend's feedback)
-          python3 daily_swing_trader.py \
-            --data=/tmp/btc_data.csv \
-            --config_json='{"n_models":8,"n_estimators":1500,"eta":0.01,"early_stopping_rounds":200}'
+          # FRIEND'S HARDENED COMMAND - Explicit paths and config overrides
+          echo "🧾 Verifying data path exists..."
+          ls -la /tmp/btc_data.csv
 
-          echo "✅ DAILY SWING TRADING COMPLETE"
+          echo "🧾 Starting training with explicit config and proper args..."
+          python3 daily_swing_trader.py \
+            --data /tmp/btc_data.csv \
+            --outdir /tmp/out \
+            --gcs_out gs://YOUR_GCP_PROJECT-vertex-training/experiments/daily-swing-$(date +%Y%m%d-%H%M%S) \
+            --expected_cadence 1H \
+            --config_json '{"bar_horizon_hours":4,"prod_mode":false,"n_models":4,"n_estimators":600,"eta":0.02,"early_stopping_rounds":50}'
+
+          echo "✅ DAILY SWING TRAINING COMPLETE"
 EOF
 
 # Deploy to Vertex AI

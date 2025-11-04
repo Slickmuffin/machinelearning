@@ -25,7 +25,10 @@ class TradingConfig:
     """Senior Dev Economic Specification - Realistic Trading Config"""
     initial_balance: float = 10_000.0
     max_leverage: float = 3.0
-    
+
+    # Training vs Production mode
+    training_mode: bool = True       # True = learning phase (lenient), False = production (strict)
+
     # Senior Dev Fee Structure
     taker_fee: float = 0.0003        # 3 bps realistic
     maker_fee: float = 0.0001        # 1 bp (rarely used in a marketable RL agent)
@@ -34,13 +37,13 @@ class TradingConfig:
     lambda_leverage: float = 2e-5    # mild leverage aversion
     funding_rate_8h: float = 0.0001  # 1 bp / 8h typical baseline
     step_hours: float = 1.0
-    
+
     # Action-cost alignment
     no_trade_band: float = 0.05      # ignore |ΔN| < 5% of equity
     turnover_cap: float = 1.0        # |ΔN| ≤ 100% of equity per step
     hysteresis_threshold: float = 0.5 # min |ΔN| for sign flips
-    
-    # Economic tripwires
+
+    # Economic tripwires (ONLY FOR PRODUCTION - disabled during training)
     max_trading_cost_rate: float = 0.002  # 20 bps per step
     max_turnover_rate: float = 1.5        # 150% turnover/equity
     min_gross_pnl_threshold: float = 0.05 # min turnover for gross PnL check
@@ -56,14 +59,21 @@ class PPOTradingEnvironmentSeniorDev(gym.Env):
         # Load data with strict validation
         try:
             if data_path:
-                self.data = load_prices_or_fail(data_path, step_minutes=60)
+                data_result = load_prices_or_fail(data_path, step_minutes=60)
             else:
                 # Try default path
-                self.data = load_prices_or_fail("/tmp/btc_data.csv", step_minutes=60)
+                data_result = load_prices_or_fail("/tmp/btc_data.csv", step_minutes=60)
+
+            # Handle both tuple (df, metrics) and dataframe returns
+            if isinstance(data_result, tuple):
+                self.data, self.data_metrics = data_result
+            else:
+                self.data = data_result
+                self.data_metrics = None
         except Exception as e:
             logger.error(f"DATA BLOCK: {e}")
             raise SystemExit(f"DATA BLOCK: {e}")
-        
+
         self.prices = self.data["close"].to_numpy()
         
         # Setup observation space
@@ -216,36 +226,49 @@ class PPOTradingEnvironmentSeniorDev(gym.Env):
         return traded, trading_cost
     
     def _check_economic_tripwires(self, trading_cost: float, traded: float, E_pre: float, pnl: float, reward: float):
-        """Senior Dev Economic Tripwires - fail fast"""
-        # Track costs and turnovers
+        """
+        Economic monitoring - TRAINING MODE vs PRODUCTION MODE
+
+        TRAINING MODE (learning phase):
+        - AI needs to explore and learn from mistakes
+        - High costs and turnover are EXPECTED during exploration
+        - Warnings disabled to avoid log spam
+
+        PRODUCTION MODE (real trading):
+        - Strict tripwires to prevent runaway costs
+        - Alert on unusual patterns
+        """
+        # SKIP ALL CHECKS IN TRAINING MODE - let the AI learn!
+        if self.config.training_mode:
+            return
+
+        # PRODUCTION MODE ONLY: Track costs and turnovers
         if E_pre > 0:
             cost_rate = trading_cost / E_pre
             turnover_rate = traded / E_pre
-            
+
             self.step_costs.append(cost_rate)
             self.step_turnovers.append(turnover_rate)
-            
+
             # Keep recent history
             if len(self.step_costs) > 100:
                 self.step_costs.pop(0)
                 self.step_turnovers.pop(0)
-            
+
             # Tripwire checks
             if len(self.step_costs) >= 10:  # After warmup
                 mean_cost_rate = np.mean(self.step_costs[-10:])
                 mean_turnover_rate = np.mean(self.step_turnovers[-10:])
-                
-                # Log but don't abort - let training complete
-                if mean_cost_rate > self.config.max_trading_cost_rate:
-                    logger.warning(f"⚠️ HIGH TRADING COSTS: Mean cost rate {mean_cost_rate:.4f} > {self.config.max_trading_cost_rate:.4f}")
 
-                # Log but don't abort - let training complete
+                # Production alerts
+                if mean_cost_rate > self.config.max_trading_cost_rate:
+                    logger.warning(f"⚠️ PRODUCTION ALERT - HIGH TRADING COSTS: {mean_cost_rate:.4f} > {self.config.max_trading_cost_rate:.4f}")
+
                 if mean_turnover_rate > self.config.max_turnover_rate:
-                    logger.warning(f"⚠️ HIGH TURNOVER: Mean turnover rate {mean_turnover_rate:.4f} > {self.config.max_turnover_rate:.4f}")
-                
-                # Alert if gross_pnl ≤ 0 while turnover/E_pre < 0.05 (likely data or reward issue)
+                    logger.warning(f"⚠️ PRODUCTION ALERT - HIGH TURNOVER: {mean_turnover_rate:.4f} > {self.config.max_turnover_rate:.4f}")
+
                 if pnl <= 0 and mean_turnover_rate < self.config.min_gross_pnl_threshold:
-                    logger.warning(f"⚠️ ECONOMIC ALERT: Negative PnL {pnl:.4f} with low turnover {mean_turnover_rate:.4f}")
+                    logger.warning(f"⚠️ PRODUCTION ALERT - ECONOMIC ISSUE: Negative PnL {pnl:.4f} with low turnover {mean_turnover_rate:.4f}")
     
     def _get_observation(self) -> np.ndarray:
         if self.current_step >= len(self.data):
