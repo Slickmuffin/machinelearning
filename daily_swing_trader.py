@@ -170,7 +170,17 @@ def upload_dir_to_gcs(local_dir: str, gcs_uri: str):
     import pathlib
 
     if not gcs_uri.startswith("gs://"):
-        raise ValueError(f"gcs_out must be gs://*, got {gcs_uri}")
+        # Local artifact mode for dev runs
+        import shutil, os
+        os.makedirs(gcs_uri, exist_ok=True)
+        for p in pathlib.Path(local_dir).rglob("*"):
+            if p.is_file():
+                dst = pathlib.Path(gcs_uri) / p.relative_to(local_dir)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(p, dst)
+        # Write success sentinel locally
+        pathlib.Path(gcs_uri, "SUCCESS.ok").write_text("ok")
+        return len(list(pathlib.Path(local_dir).rglob("*")))
     parsed = urlparse(gcs_uri)
     bucket_name = parsed.netloc
     prefix = parsed.path.lstrip("/")
@@ -235,17 +245,29 @@ def time_split(df, feat_cols, label_col, test_start_date=None, test_frac=0.2):
         i = int((1.0 - test_frac)*len(df)); tr, va = df.iloc[:i], df.iloc[i:]
     X_tr, y_tr = tr[feat_cols].astype("float32").values, tr[label_col].astype("int32").values
     X_va, y_va = va[feat_cols].astype("float32").values, va[label_col].astype("int32").values
-    # ensure two-class validation
+
+    # ensure two-class validation with rolling backoff (maintains time ordering)
     if len(np.unique(y_va)) < 2:
-        from sklearn.model_selection import train_test_split
-        X_tr, X_va, y_tr, y_va = train_test_split(
-            df[feat_cols].astype("float32").values,
-            df[label_col].astype("int32").values,
-            test_size=0.2, stratify=df[label_col].values, random_state=42
-        )
         import logging
         logger = logging.getLogger(__name__)
-        logger.warning("Val single-class → used stratified fallback (validation only).")
+        logger.warning(f"⚠️ Validation split single-class (unique={np.unique(y_va)}) — time-aware backoff")
+
+        # roll back split point until val is two-class or we give up
+        ok = False
+        for frac in [0.78, 0.76, 0.74, 0.72]:
+            i = int(frac * len(df))
+            tr2, va2 = df.iloc[:i], df.iloc[i:]
+            X_tr2, y_tr2 = tr2[feat_cols].astype("float32").values, tr2[label_col].astype("int32").values
+            X_va2, y_va2 = va2[feat_cols].astype("float32").values, va2[label_col].astype("int32").values
+            if len(np.unique(y_va2)) == 2 and len(X_va2) >= 20:
+                logger.info(f"✅ Found valid time split at {int(frac*100)}% / {100-int(frac*100)}%")
+                X_tr, y_tr, X_va, y_va = X_tr2, y_tr2, X_va2, y_va2
+                ok = True
+                break
+
+        if not ok:
+            logger.warning("⚠️ Still single-class validation after backoff — will proceed with caution")
+
     return X_tr, y_tr, X_va, y_va
 
 def train_xgb_strong(X_tr, y_tr, X_va, y_va, seed=0):
@@ -272,7 +294,7 @@ def train_xgb_strong(X_tr, y_tr, X_va, y_va, seed=0):
         trees = 200
     p_va = booster.predict(dva)
     auc = float(roc_auc_score(y_va, p_va)) if len(np.unique(y_va))==2 else float("nan")
-    ll  = float(log_loss(y_va, p_va, eps=1e-7))
+    ll  = float(log_loss(y_va, p_va))
     return booster, trees, auc, ll
 
 def publish(outdir, gcs_out, booster, meta: dict):
@@ -920,10 +942,13 @@ class SwingTrader:
             self.logger.info(f"🎯 Added labels: {len(final_df)} samples")
 
             # HARD FAIL on insufficient data (friend's 4-hour system specs)
+            # Hard gate for PROD; lenient for DEV/local
             min_training_samples = 200   # Realistic threshold for current 4-hour data (231 samples = 11:1 ratio)
+            if not self.config.prod_mode:
+                min_training_samples = 60  # dev tolerance for local runs
 
             # BUILD TRACKING - Friend's go/no-go checklist
-            self.logger.info(f"🧾 BUILD_ID={CODE_HASH} | min_training_samples={min_training_samples}")
+            self.logger.info(f"🧾 BUILD_ID={CODE_HASH} | min_training_samples={min_training_samples} | prod_mode={self.config.prod_mode}")
             if len(final_df) < min_training_samples:
                 raise ValueError(f"Not enough 4h samples: {len(final_df)} (need ≥{min_training_samples})")
 
@@ -1138,8 +1163,11 @@ if __name__ == "__main__":
         assert_expected_cadence(df_check["timestamp"], args.expected_cadence)
         logger.info(f"✅ Cadence verified: {args.expected_cadence}")
     except Exception as e:
-        logger.error(f"❌ Cadence verification failed: {e}")
-        sys.exit(1)
+        if not config.prod_mode:
+            logger.warning(f"⚠️ Cadence verification failed in DEV: {e} — continuing (DEV mode).")
+        else:
+            logger.error(f"❌ Cadence verification failed (PROD): {e}")
+            sys.exit(1)
 
     try:
         results = trader.run_full_pipeline(args.data, test_start_date=args.test_start_date)
