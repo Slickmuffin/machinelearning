@@ -138,7 +138,15 @@ class PPOTradingEnvironmentSeniorDev(gym.Env):
         # Calculate PnL from price change
         r = (next_price / self.price) - 1.0
         pnl = self.N * r
-        
+
+        # FIX #4: Safety guard - cap catastrophic single-step losses
+        # Prevents Step 12→13 style catastrophes (-84% in 1 step)
+        max_step_loss = 0.25 * E_pre  # Max 25% loss per step
+        if pnl < -max_step_loss:
+            self.logger.warning(f"🚨 CAPPED CATASTROPHIC LOSS: PnL={pnl:.2f} (${pnl:.2f}) capped to {-max_step_loss:.2f} (-25%)")
+            self.logger.warning(f"   Position N=${self.N:.2f}, Price change: ${self.price:.2f}→${next_price:.2f} ({r*100:.1f}%)")
+            pnl = -max_step_loss
+
         # 2) Funding correctly once per 8h window
         self._fund_accum += self.config.step_hours
         funding = 0.0

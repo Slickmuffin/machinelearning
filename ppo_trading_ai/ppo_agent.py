@@ -30,7 +30,7 @@ class PPOConfig:
     gamma: float = 0.99
     gae_lambda: float = 0.95
     clip_epsilon: float = 0.15
-    entropy_coef: float = 0.01
+    entropy_coef: float = 0.02  # FIX #5: 2x higher initial entropy for exploration
     value_loss_coef: float = 0.5
     max_grad_norm: float = 0.5
     
@@ -438,9 +438,21 @@ class PPOAgent:
         
         start_time = time.time()
         
-        # Entropy schedule: decay over training (per senior dev recommendation)
-        entropy_coef = self.config.entropy_coef * max(0.1, 1.0 - self.total_updates / 1000.0)
-        
+        # FIX #1: Maintain higher entropy for exploration (prevent policy collapse)
+        # OLD: max(0.1, 1.0 - updates/1000) decayed to 10% by update 900
+        # NEW: max(0.5, 1.0 - updates/3000) maintains 50% and decays 3x slower
+        entropy_coef = self.config.entropy_coef * max(0.5, 1.0 - self.total_updates / 3000.0)
+
+        # FIX #2: Action variance monitoring to detect policy collapse
+        action_std_threshold = 0.01  # Minimum acceptable std dev
+        if self.buffer.size > 100:
+            recent_actions = self.buffer.actions[max(0, self.buffer.size-100):self.buffer.size]
+            action_std = torch.std(recent_actions).item()
+
+            if action_std < action_std_threshold:
+                logger.warning(f"🚨 POLICY COLLAPSE WARNING: Action std={action_std:.6f} < {action_std_threshold}")
+                logger.warning(f"   Recent actions: min={recent_actions.min():.4f}, max={recent_actions.max():.4f}, mean={recent_actions.mean():.4f}")
+
         # KL early stopping threshold
         target_kl = 0.02
         
