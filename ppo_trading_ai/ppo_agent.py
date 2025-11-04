@@ -215,7 +215,7 @@ class PPOTrajectoryBuffer:
         self.rewards[self.ptr] = torch.as_tensor(reward, dtype=torch.float32, device=self.device)
         self.values[self.ptr] = torch.as_tensor(value, dtype=torch.float32, device=self.device)
         self.log_probs[self.ptr] = torch.as_tensor(log_prob, dtype=torch.float32, device=self.device)
-        self.dones[self.ptr] = torch.as_tensor(done, dtype=torch.bool, device=self.device)
+        self.dones[self.ptr] = torch.as_tensor(bool(done), dtype=torch.bool, device=self.device)
         
         self.ptr = (self.ptr + 1) % self.capacity
         self.size = min(self.size + 1, self.capacity)

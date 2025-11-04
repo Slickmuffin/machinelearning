@@ -206,7 +206,8 @@ def train_ppo(
     max_steps: int = 1_000_000,
     rollout_steps: int = 256,
     save_interval: int = 100,
-    checkpoint_dir: str = "./checkpoints"
+    checkpoint_dir: str = "./checkpoints",
+    step_minutes: int = 60
 ):
     """
     Main training loop with comprehensive progress monitoring
@@ -218,6 +219,7 @@ def train_ppo(
         rollout_steps: Steps per rollout
         save_interval: Save checkpoint every N updates
         checkpoint_dir: Directory to save checkpoints
+        step_minutes: Data frequency in minutes (60=1h, 240=4h, 1440=1d)
     """
 
     # Setup
@@ -230,7 +232,7 @@ def train_ppo(
 
     # Create environment
     logger.info(f"Loading data from {data_path}")
-    env = PPOTradingEnvironmentSeniorDev(data_path=data_path)
+    env = PPOTradingEnvironmentSeniorDev(data_path=data_path, step_minutes=step_minutes)
     logger.info(f"Environment created: {env.observation_space.shape[0]} features")
 
     # Create PPO agent
@@ -450,6 +452,8 @@ if __name__ == "__main__":
                        help='Save checkpoint every N updates')
     parser.add_argument('--checkpoint-dir', type=str, default='./checkpoints',
                        help='Directory to save checkpoints')
+    parser.add_argument('--step-minutes', type=int, default=60,
+                       help='Data frequency in minutes (60=1h, 240=4h, 1440=1d)')
 
     args = parser.parse_args()
 
@@ -462,5 +466,6 @@ if __name__ == "__main__":
         max_steps=args.steps,
         rollout_steps=args.rollout_steps,
         save_interval=args.save_interval,
-        checkpoint_dir=args.checkpoint_dir
+        checkpoint_dir=args.checkpoint_dir,
+        step_minutes=args.step_minutes
     )

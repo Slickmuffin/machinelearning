@@ -51,18 +51,18 @@ class TradingConfig:
 class PPOTradingEnvironmentSeniorDev(gym.Env):
     """Trading Environment with Complete Senior Dev Specifications"""
     
-    def __init__(self, config: TradingConfig = None, data_path: str = None):
+    def __init__(self, config: TradingConfig = None, data_path: str = None, step_minutes: int = 60):
         super().__init__()
-        
+
         self.config = config or TradingConfig()
-        
+
         # Load data with strict validation
         try:
             if data_path:
-                data_result = load_prices_or_fail(data_path, step_minutes=60)
+                data_result = load_prices_or_fail(data_path, step_minutes=step_minutes)
             else:
                 # Try default path
-                data_result = load_prices_or_fail("/tmp/btc_data.csv", step_minutes=60)
+                data_result = load_prices_or_fail("/tmp/btc_data.csv", step_minutes=step_minutes)
 
             # Handle both tuple (df, metrics) and dataframe returns
             if isinstance(data_result, tuple):

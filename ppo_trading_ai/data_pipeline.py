@@ -309,16 +309,11 @@ def load_prices_or_fail(path: str, step_minutes: int, reference_venues: Optional
     logger.info("Validating quality gates...")
     quality_metrics = validate_quality_gates(df)
 
-    # 8) Clean up temporary columns
-    cols_to_keep = ['ts', 'close', 'open', 'high', 'low', 'gap_filled', 'ret_outlier_fixed',
-                   'cross_venue_deviation', 'cross_venue_median']
+    # 8) Clean up temporary columns - preserve ALL original features for ML training
+    # Only drop temporary processing columns (those ending in _clean)
+    cols_to_drop = [col for col in df.columns if col.endswith('_clean')]
 
-    # Keep original columns that might be needed
-    for col in df.columns:
-        if col.startswith('bb_') or col.startswith('sma_') or col.startswith('ema_') or col in ['volume', 'volume_base', 'volume_quote']:
-            cols_to_keep.append(col)
-
-    df_final = df[[col for col in cols_to_keep if col in df.columns]].copy()
+    df_final = df.drop(columns=cols_to_drop, errors='ignore').copy()
     df_final = df_final.dropna(subset=['close'])  # Final NaN removal
 
     logger.info(f"✅ Enhanced data pipeline complete:")
