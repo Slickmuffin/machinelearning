@@ -25,7 +25,7 @@ class PPOConfig:
     # Network architecture
     hidden_size: int = 512
     recurrent_size: int = 128
-    
+
     # PPO parameters
     gamma: float = 0.99
     gae_lambda: float = 0.95
@@ -33,13 +33,20 @@ class PPOConfig:
     entropy_coef: float = 0.02  # FIX #5: 2x higher initial entropy for exploration
     value_loss_coef: float = 0.5
     max_grad_norm: float = 0.5
-    
+
     # Training
     learning_rate: float = 1e-4
+    critic_lr: float = 3e-5  # CartPole validation: 3x lower LR for critic stability
     ppo_epochs: int = 8
     minibatch_size: int = 2048
     rollout_steps: int = 1024
-    
+
+    # Stability fixes (CartPole validation proven)
+    use_separate_optimizers: bool = True  # Separate actor/critic optimizers
+    value_clip_epsilon: float = 0.2  # Value loss clipping
+    max_kl: float = 0.03  # KL divergence early stopping
+    critic_max_grad_norm: float = 0.1  # Tighter gradient clipping for critic
+
     # GPU optimization - AMP disabled for numerical stability
     use_amp: bool = False  # Disabled per senior dev recommendation
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -292,10 +299,10 @@ class PPOAgent:
         # Value-only parameters: value head only
         self.value_params = list(self.network.value_head.parameters())
 
-        # Three separate optimizers to avoid gradient conflicts
-        self.shared_optimizer = optim.Adam(self.shared_params, lr=self.config.learning_rate)
-        self.policy_optimizer = optim.Adam(self.policy_params, lr=self.config.learning_rate)
-        self.value_optimizer = optim.Adam(self.value_params, lr=self.config.learning_rate * 0.3)  # Lower LR for value
+        # Three separate optimizers to avoid gradient conflicts (CartPole validation proven)
+        self.shared_optimizer = optim.Adam(self.shared_params, lr=self.config.learning_rate, eps=1e-5)
+        self.policy_optimizer = optim.Adam(self.policy_params, lr=self.config.learning_rate, eps=1e-5)
+        self.value_optimizer = optim.Adam(self.value_params, lr=self.config.critic_lr, eps=1e-5)  # Use config.critic_lr directly
         
         # Mixed precision scaler
         self.scaler = GradScaler() if self.config.use_amp else None
@@ -443,15 +450,20 @@ class PPOAgent:
         # NEW: max(0.5, 1.0 - updates/3000) maintains 50% and decays 3x slower
         entropy_coef = self.config.entropy_coef * max(0.5, 1.0 - self.total_updates / 3000.0)
 
-        # FIX #2: Action variance monitoring to detect policy collapse
-        action_std_threshold = 0.01  # Minimum acceptable std dev
+        # FIX #3: Enhanced action variance monitoring to detect policy collapse
+        action_std_threshold = 0.05  # Raised from 0.01 to require more exploration
         if self.buffer.size > 100:
             recent_actions = self.buffer.actions[max(0, self.buffer.size-100):self.buffer.size]
             action_std = torch.std(recent_actions).item()
+            action_range = (torch.max(recent_actions) - torch.min(recent_actions)).item()
 
             if action_std < action_std_threshold:
                 logger.warning(f"🚨 POLICY COLLAPSE WARNING: Action std={action_std:.6f} < {action_std_threshold}")
-                logger.warning(f"   Recent actions: min={recent_actions.min():.4f}, max={recent_actions.max():.4f}, mean={recent_actions.mean():.4f}")
+                logger.warning(f"   Action range: {action_range:.4f} (min={recent_actions.min():.4f}, max={recent_actions.max():.4f}, mean={recent_actions.mean():.4f})")
+
+                # Critical level - model stuck in narrow range
+                if action_std < 0.02:
+                    logger.warning(f"   ⚠️ CRITICAL: Action variance extremely low (std={action_std:.6f})")
 
         # KL early stopping threshold
         target_kl = 0.02
@@ -548,13 +560,13 @@ class PPOAgent:
                         )
                         policy_loss = -torch.min(policy_loss_1, policy_loss_2).mean()
                         
-                        # SENIOR DEV FIX #3: Value Loss Clipping (CRITICAL - prevents catastrophic explosions)
+                        # SENIOR DEV FIX #3: Value Loss Clipping + Huber (CartPole validation proven)
                         value_clipped = batch['returns'] + torch.clamp(
                             values.squeeze() - batch['returns'],
-                            -self.config.clip_epsilon, self.config.clip_epsilon
+                            -self.config.value_clip_epsilon, self.config.value_clip_epsilon
                         )
-                        value_loss_1 = F.mse_loss(values.squeeze(), batch['returns'])
-                        value_loss_2 = F.mse_loss(value_clipped, batch['returns'])
+                        value_loss_1 = F.smooth_l1_loss(values.squeeze(), batch['returns'], reduction='mean')  # Huber
+                        value_loss_2 = F.smooth_l1_loss(value_clipped, batch['returns'], reduction='mean')
                         value_loss = torch.max(value_loss_1, value_loss_2)  # Clipped value loss
                         
                         # Check computed losses for NaN/Inf
@@ -660,14 +672,14 @@ class PPOAgent:
                         ratio, 1 - self.config.clip_epsilon, 1 + self.config.clip_epsilon
                     )
                     policy_loss = -torch.min(policy_loss_1, policy_loss_2).mean()
-                    
-                    # SENIOR DEV FIX #3: Value Loss Clipping (CRITICAL - prevents catastrophic explosions)
+
+                    # SENIOR DEV FIX #3: Value Loss Clipping + Huber (CartPole validation proven)
                     value_clipped = batch['returns'] + torch.clamp(
                         values.squeeze() - batch['returns'],
-                        -self.config.clip_epsilon, self.config.clip_epsilon
+                        -self.config.value_clip_epsilon, self.config.value_clip_epsilon
                     )
-                    value_loss_1 = F.mse_loss(values.squeeze(), batch['returns'])
-                    value_loss_2 = F.mse_loss(value_clipped, batch['returns'])
+                    value_loss_1 = F.smooth_l1_loss(values.squeeze(), batch['returns'], reduction='mean')  # Huber
+                    value_loss_2 = F.smooth_l1_loss(value_clipped, batch['returns'], reduction='mean')
                     value_loss = torch.max(value_loss_1, value_loss_2)  # Clipped value loss
                     
                     # Check computed losses for NaN/Inf
