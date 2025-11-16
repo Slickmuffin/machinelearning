@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Training artifacts - keep only final model
+checkpoints_*/
+!checkpoints_fixed_lstm/
+checkpoints_fixed_lstm/checkpoint_*.pt
+!checkpoints_fixed_lstm/final_model.pt
+
+# Logs - keep only the clean training log
+*.log
+!training_fixed_lstm_clean.log
+
+# Data files
+*.csv
+data/
+
+# Archives
+*.tar.gz
+*.zip
+diagnostic_package*/
+
+# Temporary files
+*.pkl
+nohup.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
