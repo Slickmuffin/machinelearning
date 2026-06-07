@@ -18,6 +18,7 @@ from typing import Tuple, Dict, Optional
 from dataclasses import dataclass
 
 from ppo_trading_ai.data_pipeline import load_prices_or_fail
+from ppo_trading_ai.features import calculate_advanced_features
 
 
 @dataclass
@@ -32,10 +33,8 @@ class TradingConfigExperimentB:
     taker_fee: float = 0.0003  # 3 bps
     slippage_bp: float = 0.5  # 0.5 bp
 
-    # EXPERIMENT B: Reduced penalties by 2-3x
-    lambda_turnover: float = 3.33e-5  # Was 1e-4, now divided by 3
-    lambda_leverage: float = 8e-6     # Was 2e-5, now divided by 2.5
-    survival_bonus: float = 0.001     # New: reward for staying alive
+    # Reward clipping for numerical stability
+    reward_clip: float = 0.5  # Clip rewards to prevent optimizer instability
 
     funding_rate_8h: float = 0.0001  # 1 bp per 8h
     step_hours: float = 1.0
@@ -43,20 +42,20 @@ class TradingConfigExperimentB:
 
 class ExperimentBTradingEnvironment:
     """
-    Experiment B Trading Environment - Lighter penalties for profitability.
+    Experiment B Trading Environment - HONEST P&L ONLY.
 
     Built on FIXED position sizing (no compounding bug):
     - Position sizing references INITIAL balance
     - No automatic position rebalancing
     - Prevents exponential compounding from growing equity
 
-    Experiment B improvements:
-    - Reduced turnover penalty by 3x (1e-4 → 3.33e-5)
-    - Reduced leverage penalty by 2.5x (2e-5 → 8e-6)
-    - Added survival bonus (0.001 per step)
-    - Wider reward clipping (±1.0 vs ±0.5)
+    PHASE 1.5 FIX - Removed reward hacking:
+    - NO survival bonus (was causing "do nothing" exploit)
+    - NO explicit turnover/leverage penalties (costs already in equity)
+    - Reward = pure equity change / initial balance
+    - Wider reward clipping (±0.5) for numerical stability only
 
-    Goal: Let agent feel profit signals instead of drowning in penalties.
+    Goal: Agent optimizes ONLY for actual trading P&L, not fake bonuses.
     """
 
     def __init__(
@@ -105,44 +104,19 @@ class ExperimentBTradingEnvironment:
         print(f"  Episode length: {self.episode_length}")
         print(f"  Episode overlap: {self.config.episode_overlap}")
         print(f"  FIX APPLIED: Position sizing uses INITIAL balance (no compounding)")
-        print(f"  EXPERIMENT B: Lighter penalties (÷2-3x), survival bonus, wider clipping")
+        print(f"  PHASE 1.5 FIX: Honest P&L only - no survival bonus, no fake rewards")
 
     def _calculate_features(self, df: pd.DataFrame) -> np.ndarray:
-        """Calculate market features"""
-        prices = df['close'].values
+        """
+        Calculate market features using advanced 28-feature calculator.
 
-        # Returns
-        returns_1h = np.diff(np.log(prices), prepend=np.log(prices[0]))
-        returns_4h = pd.Series(np.log(prices)).diff(4).fillna(0).values
-        returns_24h = pd.Series(np.log(prices)).diff(24).fillna(0).values
-
-        # Volatility (with NaN handling)
-        vol_24h = pd.Series(returns_1h).rolling(24, min_periods=1).std().fillna(0).values
-
-        # Moving averages
-        ma_20 = pd.Series(prices).rolling(20, min_periods=1).mean().values
-        ma_50 = pd.Series(prices).rolling(50, min_periods=1).mean().values
-
-        ma_ratio_20 = (prices - ma_20) / (ma_20 + 1e-8)
-        ma_ratio_50 = (prices - ma_50) / (ma_50 + 1e-8)
-
-        # Normalized volatility (with NaN handling)
-        vol_mean = vol_24h.mean()
-        if vol_mean > 1e-8:
-            vol_norm = vol_24h / vol_mean - 1.0
-        else:
-            vol_norm = np.zeros_like(vol_24h)
-
-        features = np.column_stack([
-            returns_1h,
-            returns_4h,
-            returns_24h,
-            vol_24h,
-            ma_ratio_20,
-            ma_ratio_50,
-            np.log(prices / prices[0]),  # Cumulative return
-            vol_norm  # Normalized volatility (NaN-safe)
-        ])
+        Upgraded from 8 features to 28 features (3.5x more signal):
+        - Original 8: returns (1h, 4h, 24h), vol, MA ratios, cumulative return, vol_norm
+        - New 20: Multi-timeframe returns (2h, 6h, 12h, 3d, 7d, 30d), RSI (14, 28),
+                  MACD, vol intelligence, Bollinger Bands, ATR, price action, volume, time
+        """
+        # Use the advanced 28-feature calculator from features.py
+        features = calculate_advanced_features(df)
 
         return features.astype(np.float32)
 
@@ -268,17 +242,28 @@ class ExperimentBTradingEnvironment:
         # Post-step equity
         E_post = max(self.equity, 1e-12)
 
-        # Calculate reward (log-equity with lighter penalties + survival bonus)
-        gross_reward = np.log(E_post / max(E_pre, 1e-12))
-        turnover_penalty = self.config.lambda_turnover * (traded_notional / max(E_pre, 1.0))
+        # ===================================================================
+        # PHASE 1.5 FIX: HONEST P&L ONLY
+        # ===================================================================
+        # Track actual P&L and costs for diagnostics
+        step_pnl = E_post - E_pre
 
-        current_notional = abs(self.position_btc * current_price)
-        leverage_penalty = self.config.lambda_leverage * (current_notional / max(E_post, 1.0))
+        # Calculate funding cost for this step (may be 0 if not at 8h mark)
+        funding_cost = 0.0
+        if self.funding_accumulator >= 8.0:
+            notional = abs(self.position_btc * current_price)
+            funding_cost = notional * self.config.funding_rate_8h
 
-        # EXPERIMENT B: Add survival bonus and wider clipping
-        survival_bonus = self.config.survival_bonus
-        reward = gross_reward - turnover_penalty - leverage_penalty + survival_bonus
-        reward = float(np.clip(reward, -1.0, 1.0))  # Wider clipping: ±1.0 vs ±0.5
+        step_cost = trading_cost + funding_cost
+
+        # Reward = pure equity change scaled by initial capital
+        # No survival bonus, no artificial penalties
+        # Costs are already reflected in equity change
+        step_return = step_pnl / self.config.initial_balance
+        reward = step_return
+
+        # Clip only for numerical stability (not to shape behavior)
+        reward = float(np.clip(reward, -self.config.reward_clip, self.config.reward_clip))
 
         # Update step
         self.current_step += 1
@@ -307,13 +292,16 @@ class ExperimentBTradingEnvironment:
 
         sequence = np.array(self.sequence_buffer)
 
+        # Info dict with actual P&L and cost tracking
         info = {
-            'equity': E_post,
-            'position': self.position_btc,
-            'position_pct': (self.position_btc * current_price) / (E_post + 1e-8),
-            'price': current_price,
-            'trading_cost': trading_cost,
-            'reward': reward
+            'equity': float(E_post),
+            'position': float(self.position_btc * current_price),  # Position in USD notional
+            'position_pct': float((self.position_btc * current_price) / (E_post + 1e-8)),
+            'price': float(current_price),
+            'pnl': float(step_pnl),  # CRITICAL: Actual P&L for backtest
+            'cost': float(step_cost),  # CRITICAL: Actual costs for backtest
+            'traded_notional': float(traded_notional),
+            'reward': float(reward)
         }
 
         return sequence, reward, terminated, truncated, info

@@ -36,3 +36,28 @@ nohup.out
 .idea/
 *.swp
 *.swo
+
+# Secrets and credentials (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.p8
+id_rsa
+id_rsa.*
+.netrc
+.git-credentials
+.npmrc
+.pypirc
+pip.conf
+.aws/
+kubeconfig
+*service-account*.json
+*credentials*.json
+
+# Local tooling state
+.claude/
+.auto_memory_state.json

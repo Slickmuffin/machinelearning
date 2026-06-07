@@ -33,8 +33,14 @@ logger = logging.getLogger(__name__)
 
 
 def collect_rollout(env, agent, rollout_steps):
-    """Collect rollout data"""
+    """Collect rollout data with activity monitoring"""
     sequences, actions, log_probs, rewards, values, dones = [], [], [], [], [], []
+
+    # Activity tracking
+    positions = []
+    trades = []
+    pnls = []
+    costs = []
 
     sequence, info = env.reset()
     agent.reset_hidden_state()
@@ -63,6 +69,12 @@ def collect_rollout(env, agent, rollout_steps):
         values.append(value.cpu().item())
         dones.append(done)
 
+        # Track activity
+        positions.append(step_info.get('position_pct', 0.0))
+        trades.append(step_info.get('traded_notional', 0.0))
+        pnls.append(step_info.get('pnl', 0.0))
+        costs.append(step_info.get('cost', 0.0))
+
         sequence = next_sequence
         step_count += 1
 
@@ -84,12 +96,27 @@ def collect_rollout(env, agent, rollout_steps):
     advantages = np.array(advantages)
     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
+    # Calculate activity metrics
+    actions_arr = np.array(actions).flatten()
+    activity_metrics = {
+        'avg_abs_position': np.mean(np.abs(positions)),
+        'avg_action': np.mean(actions_arr),
+        'action_std': np.std(actions_arr),
+        'action_min': np.min(actions_arr),
+        'action_max': np.max(actions_arr),
+        'num_trades': np.sum(np.array(trades) > 0),
+        'total_pnl': np.sum(pnls),
+        'total_costs': np.sum(costs),
+        'mean_reward': np.mean(rewards)
+    }
+
     return {
         'sequences': np.array(sequences),
         'actions': np.array(actions),
         'log_probs': np.array(log_probs),
         'advantages': advantages,
-        'returns': np.array(returns)
+        'returns': np.array(returns),
+        'activity': activity_metrics
     }
 
 
@@ -195,38 +222,42 @@ def evaluate_on_validation(env, agent, num_episodes: int = 10) -> dict:
 
 def main():
     logger.info("=" * 80)
-    logger.info("EXPERIMENT B TRAINING - LIGHTER PENALTIES FOR PROFITABILITY")
+    logger.info("PHASE 1.5 TRAINING - HONEST REWARD FUNCTION")
     logger.info("=" * 80)
-    logger.info("Based on friend's feedback:")
-    logger.info("  - 4000 updates (2x longer)")
-    logger.info("  - Reduced penalties: turnover ÷3, leverage ÷2.5")
-    logger.info("  - Survival bonus: 0.001 per step")
-    logger.info("  - Wider reward clipping: ±1.0 vs ±0.5")
-    logger.info("  - Train on 70%, validate on 30%")
+    logger.info("Critical fix applied:")
+    logger.info("  - REMOVED survival bonus (was causing reward hacking)")
+    logger.info("  - REMOVED artificial penalties (costs already in equity)")
+    logger.info("  - Reward = pure equity change / initial balance")
+    logger.info("  - Same data: 3 years BTC/USDT (26,328 hourly bars)")
+    logger.info("  - Same features: 28 features (multi-timeframe + indicators)")
+    logger.info("  - Same architecture: LSTM PPO (628K params)")
+    logger.info("  - Expected: Honest results (not fake +24.59%)")
     logger.info("=" * 80)
 
-    # Configuration
-    data_path = '/tmp/btc_data.csv'
-    checkpoint_dir = './checkpoints_experiment_b'
+    # Configuration - PROPER 70/30 TRAIN/VAL SPLIT
+    train_data_path = 'data/v2_raw/btc_train_70pct.csv'
+    val_data_path = 'data/v2_raw/btc_val_30pct.csv'
+    checkpoint_dir = './checkpoints_honest_reward_proper_split'
     os.makedirs(checkpoint_dir, exist_ok=True)
 
-    # Experiment B environment with lighter penalties
+    logger.info(f"Training data: {train_data_path} (700 bars, July 8 - Aug 7)")
+    logger.info(f"Validation data: {val_data_path} (300 bars, Aug 7 - Aug 19)")
+    logger.info("CRITICAL: Model will NEVER see validation data during training!")
+
+    # PHASE 1.5: Honest reward function (pure P&L only)
     env_config = TradingConfigExperimentB(
         initial_balance=10000.0,
         max_leverage=3.0,
         sequence_length=50,
         episode_overlap=10,
-        # Lighter penalties
-        lambda_turnover=3.33e-5,  # Was 1e-4
-        lambda_leverage=8e-6,      # Was 2e-5
-        survival_bonus=0.001       # New
+        reward_clip=0.5  # Only parameter needed - for numerical stability
     )
 
-    # Create training environment
-    env = ExperimentBTradingEnvironment(data_path=data_path, config=env_config, step_minutes=60)
+    # Create training environment (70% of data only)
+    train_env = ExperimentBTradingEnvironment(data_path=train_data_path, config=env_config, step_minutes=60)
 
     # LSTM agent
-    obs_dim = env.observation_space.shape[1]
+    obs_dim = train_env.observation_space.shape[1]
     lstm_config = LSTMPPOConfig()
     agent = LSTMPPOAgent(obs_dim=obs_dim, config=lstm_config)
 
@@ -236,10 +267,13 @@ def main():
     num_updates = 4000
     rollout_steps = 512
     save_interval = 200
+    activity_check_interval = 100
+    backtest_interval = 500
+    warmup_updates = 200
 
     for update in range(1, num_updates + 1):
-        # Collect rollout
-        rollout_data = collect_rollout(env, agent, rollout_steps)
+        # Collect rollout (TRAINING DATA ONLY)
+        rollout_data = collect_rollout(train_env, agent, rollout_steps)
 
         # PPO update
         metrics = ppo_update(agent, rollout_data, lstm_config)
@@ -253,25 +287,75 @@ def main():
                 f"Entropy: {metrics['entropy']:.4f}"
             )
 
+        # Activity monitoring (every 100 updates)
+        if update % activity_check_interval == 0:
+            activity = rollout_data['activity']
+            logger.info("=" * 80)
+            logger.info(f"ACTIVITY MONITORING - Update {update}")
+            logger.info(f"  Avg Abs Position: {activity['avg_abs_position']:.4f}")
+            logger.info(f"  Action Stats: mean={activity['avg_action']:.4f}, std={activity['action_std']:.4f}")
+            logger.info(f"  Action Range: [{activity['action_min']:.4f}, {activity['action_max']:.4f}]")
+            logger.info(f"  Trades: {activity['num_trades']}/{rollout_steps} steps ({100*activity['num_trades']/rollout_steps:.1f}%)")
+            logger.info(f"  Total P&L: ${activity['total_pnl']:.2f}")
+            logger.info(f"  Total Costs: ${activity['total_costs']:.2f}")
+            logger.info(f"  Mean Reward: {activity['mean_reward']:.6f}")
+
+            # Warning checks (after warmup)
+            if update > warmup_updates:
+                if activity['avg_abs_position'] < 0.05:
+                    logger.warning("  WARNING: Model barely holding positions (<5% avg)")
+                    logger.warning("  Possible reward hacking - check reward function!")
+
+                if activity['num_trades'] < 0.05 * rollout_steps:
+                    logger.warning(f"  WARNING: Very few trades ({activity['num_trades']} in {rollout_steps} steps)")
+                    logger.warning("  Model may be exploiting 'do nothing' strategy!")
+
+                if activity['action_std'] < 0.05:
+                    logger.warning(f"  WARNING: Action variance very low (std={activity['action_std']:.4f})")
+                    logger.warning("  Possible policy collapse!")
+            logger.info("=" * 80)
+
         # Save checkpoint
         if update % save_interval == 0:
             checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint_{update}.pt')
             agent.save(checkpoint_path)
             logger.info(f"Saved checkpoint: {checkpoint_path}")
 
-            # Evaluate on validation set
-            val_results = evaluate_on_validation(env, agent, num_episodes=10)
+            # Evaluate on training set (to monitor progress)
+            val_results = evaluate_on_validation(train_env, agent, num_episodes=10)
+
+        # Early backtesting (every 500 updates)
+        if update % backtest_interval == 0 and update > warmup_updates:
+            logger.info("\n" + "=" * 80)
+            logger.info(f"EARLY BACKTEST - Update {update}")
+            logger.info("=" * 80)
+
+            # Quick backtest on training set
+            backtest_results = evaluate_on_validation(train_env, agent, num_episodes=5)
+
+            # Check for reward hacking patterns
+            if backtest_results['pnl_pct'] > 20.0 and activity['num_trades'] < 10:
+                logger.warning("  CRITICAL: High returns with very few trades!")
+                logger.warning("  Likely reward hacking - investigate immediately!")
+
+            if abs(backtest_results['pnl_pct']) < 0.5 and update > 1000:
+                logger.info("  Note: Returns near zero - no strong edge found yet")
+
+            logger.info("=" * 80 + "\n")
 
     # Save final model
     final_path = os.path.join(checkpoint_dir, 'final_model.pt')
     agent.save(final_path)
     logger.info(f"Training complete! Final model saved: {final_path}")
 
-    # Final validation evaluation
+    # CRITICAL: Final validation on HELD-OUT data the model has NEVER seen
     logger.info("\n" + "=" * 80)
-    logger.info("FINAL VALIDATION EVALUATION")
+    logger.info("FINAL VALIDATION EVALUATION - HELD-OUT DATA (Aug 7-19)")
     logger.info("=" * 80)
-    final_val = evaluate_on_validation(env, agent, num_episodes=20)
+    logger.info("Loading validation environment with held-out data...")
+    val_env = ExperimentBTradingEnvironment(data_path=val_data_path, config=env_config, step_minutes=60)
+    logger.info("Model has NEVER seen this data during training!")
+    final_val = evaluate_on_validation(val_env, agent, num_episodes=20)
 
     # Interpretation
     logger.info("\n" + "=" * 80)

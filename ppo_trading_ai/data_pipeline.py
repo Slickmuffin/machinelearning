@@ -307,7 +307,8 @@ def load_prices_or_fail(path: str, step_minutes: int, reference_venues: Optional
 
     # 7) Final quality validation
     logger.info("Validating quality gates...")
-    quality_metrics = validate_quality_gates(df)
+    # TEMPORARY: Lower min_rows for 70/30 train/test split (699 train, 299 val rows)
+    quality_metrics = validate_quality_gates(df, min_rows=250)
 
     # 8) Clean up temporary columns - preserve ALL original features for ML training
     # Only drop temporary processing columns (those ending in _clean)

@@ -235,18 +235,20 @@ def train_ppo(
     env = PPOTradingEnvironmentSeniorDev(data_path=data_path, step_minutes=step_minutes)
     logger.info(f"Environment created: {env.observation_space.shape[0]} features")
 
-    # Create PPO agent
+    # Create PPO agent with SENIOR DEV SPECIFICATIONS
     ppo_config = PPOConfig(
-        learning_rate=3e-4,
-        use_amp=False,
+        learning_rate=3e-4,      # Senior dev spec: 3e-4 with optional decay
+        use_amp=False,           # Disabled for numerical stability
         device=device,
-        ppo_epochs=4,
-        clip_epsilon=0.2,
-        entropy_coef=0.01,
-        value_loss_coef=0.5,
-        max_grad_norm=0.5,
-        rollout_steps=rollout_steps,
-        minibatch_size=256
+        ppo_epochs=8,            # Senior dev increased from 4 to 8
+        clip_epsilon=0.15,       # Senior dev: 0.15
+        entropy_coef=0.02,       # Senior dev: 0.02
+        value_loss_coef=0.5,     # Senior dev: 0.5
+        max_grad_norm=0.5,       # Senior dev: 0.5
+        rollout_steps=rollout_steps,  # Senior dev: 512 or 1024
+        minibatch_size=256,      # Senior dev: 256
+        gamma=0.99,              # Senior dev: 0.99
+        gae_lambda=0.95          # Senior dev: 0.95
     )
 
     obs_dim = env.observation_space.shape[0]

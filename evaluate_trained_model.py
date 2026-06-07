@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / 'ppo_trading_ai'))
 from data_pipeline import load_prices_or_fail
 from trading_env_senior_dev import PPOTradingEnvironmentSeniorDev, TradingConfig
+from trading_env_fixed import SlidingWindowTradingEnv
 from ppo_agent import PPOAgent, PPONetwork, PPOConfig
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -111,9 +112,12 @@ def evaluate_model(model_path: str, data_path: str, step_minutes: int = 1440) ->
 
     logger.info(f"Data loaded: {data_df.shape[0]} timesteps, {data_df.shape[1]} features")
 
-    # Create environment
-    config = TradingConfig()
-    env = PPOTradingEnvironmentSeniorDev(config=config, data_path=data_path, step_minutes=step_minutes)
+    # Create environment (use SlidingWindowTradingEnv to match BC training setup)
+    env = SlidingWindowTradingEnv(
+        data_path=data_path,
+        episode_length=200,
+        step_minutes=step_minutes
+    )
     logger.info(f"Environment created: {len(env.prices)} timesteps")
 
     # Load trained model
@@ -155,7 +159,7 @@ def evaluate_model(model_path: str, data_path: str, step_minutes: int = 1440) ->
         done = terminated or truncated
 
         # Track equity
-        equity = info.get('equity', config.initial_balance)
+        equity = info.get('equity', 100000.0)  # Default initial balance
         equity_curve.append(equity)
 
         # Detect trades (position changes)
@@ -194,8 +198,8 @@ def evaluate_model(model_path: str, data_path: str, step_minutes: int = 1440) ->
     return calculate_metrics(
         equity_curve=equity_curve,
         all_trades=all_trades,
-        initial_balance=config.initial_balance,
-        periods_per_year=365  # Daily data
+        initial_balance=100000.0,
+        periods_per_year=8760 if step_minutes == 60 else 365  # Hourly or daily
     )
 
 
