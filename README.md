@@ -78,7 +78,6 @@ ppo_trading_ai/        PPO reinforcement learning package
   train_senior_dev.py    Training entry point
   evaluate_ppo.py        Evaluation
   leverage_sizing.py     Position sizing helpers
-data/                  Public Bitcoin OHLCV and feature datasets
 checkpoints*/          Trained model weights
 daily_swing_trader.py  Rule based trend / swing trader
 ppo_simple.py          Minimal PPO reference
@@ -122,7 +121,8 @@ from environment variables, never hard-coded.
 
 ## Usage
 
-- Reproduce the baselines vs RL comparison: `python test_baselines_walkforward.py`
+- Reproduce the baselines vs RL comparison: `python test_baselines_walkforward.py` (needs
+  the 1 hour OHLCV data in `data/sac_training/`, see the Data section)
 - Run the first version trend-following bot: `cp bot_config.example.json bot_config.json`,
   add your Binance keys, then `python live_trend_following_bot.py` (test on a paper or
   testnet account first)
@@ -135,10 +135,22 @@ Cloud training was run on Google Cloud Vertex AI; the build and job definitions 
 
 ## Data
 
-The `data/` directory holds historical Bitcoin OHLCV candles and engineered features
-(technical indicators, funding rate, open interest, long/short ratios, Fear and Greed
-index) sourced from public exchange and market APIs. It contains no account, personal,
-or private information and can be regenerated from public sources.
+The datasets are not committed to this repository. They are public Bitcoin market data
+(OHLCV candles plus engineered features such as technical indicators, funding rate, open
+interest, long/short ratios, and the Fear and Greed index) and are kept out of git to keep
+the repository light. The `data/` directory is gitignored.
+
+Regenerate locally from public sources:
+- `build_4h_data.py` fetches Bitcoin klines from the public Binance API and builds the
+  feature datasets.
+- `ppo_trading_ai/data_pipeline.py` loads and strictly validates price data for training.
+- The live bot pulls OHLCV directly from Binance through ccxt at runtime.
+
+The walk-forward validation script `test_baselines_walkforward.py` expects 1 hour BTC/USDT
+candles at `data/sac_training/btc_1h_2years.csv` (columns: timestamp, open, high, low,
+close, volume) and the split definitions at `data/sac_training/walk_forward_splits.csv`.
+Pull the 1 hour candles from Binance to recreate them. The per-split results those scripts
+produced are preserved in `walkforward_comparison.csv`.
 
 ## Lessons learned
 
