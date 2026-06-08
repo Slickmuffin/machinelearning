@@ -27,7 +27,7 @@ def verify_cost_calculations():
     env = PPOTradingEnvironment(config)
     obs, info = env.reset(seed=42)
     
-    print(f"Initial state:")
+    print("Initial state:")
     print(f"  Equity: ${info['equity']:,.2f}")
     print(f"  Position N: ${info['N']:,.2f}")
     print(f"  Leverage: {info['leverage']:.2f}x")
@@ -124,7 +124,7 @@ def verify_leverage_action_mapping():
         print(f"{description:12}: action={action:+.1f} → L={actual_leverage:+.1f}x (expected: {expected_leverage:+.1f}x)")
         
         if abs(actual_leverage - expected_leverage) < 0.1:
-            print(f"            ✅ PASS")
+            print("            ✅ PASS")
         else:
             print(f"            ❌ FAIL: Expected {expected_leverage:+.1f}x, got {actual_leverage:+.1f}x")
             all_passed = False

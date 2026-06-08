@@ -7,10 +7,8 @@ Evaluates trained model against strict production criteria:
 """
 
 import numpy as np
-import pandas as pd
 import torch
 import logging
-from typing import Dict, Tuple
 from dataclasses import dataclass
 import sys
 from pathlib import Path
@@ -18,9 +16,8 @@ from pathlib import Path
 # Import from PPO trading system
 sys.path.insert(0, str(Path(__file__).parent / 'ppo_trading_ai'))
 from data_pipeline import load_prices_or_fail
-from trading_env_senior_dev import PPOTradingEnvironmentSeniorDev, TradingConfig
 from trading_env_fixed import SlidingWindowTradingEnv
-from ppo_agent import PPOAgent, PPONetwork, PPOConfig
+from ppo_agent import PPOAgent, PPOConfig
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

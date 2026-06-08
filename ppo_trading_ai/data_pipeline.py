@@ -8,7 +8,6 @@ Battle-tested data hygiene for leveraged trading with XGBoost ensemble learning
 import pandas as pd
 import numpy as np
 import logging
-from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 from dataclasses import dataclass
 
@@ -247,7 +246,7 @@ def load_prices_or_fail(path: str, step_minutes: int, reference_venues: Optional
     if 'low' not in df.columns:
         df['low'] = df['close']
 
-    logger.info(f"Using close as primary price series")
+    logger.info("Using close as primary price series")
 
     # 2) Time canonicalization
     logger.info("Parsing timestamps with mixed format support...")
@@ -317,7 +316,7 @@ def load_prices_or_fail(path: str, step_minutes: int, reference_venues: Optional
     df_final = df.drop(columns=cols_to_drop, errors='ignore').copy()
     df_final = df_final.dropna(subset=['close'])  # Final NaN removal
 
-    logger.info(f"✅ Enhanced data pipeline complete:")
+    logger.info("✅ Enhanced data pipeline complete:")
     logger.info(f"   📊 Final shape: {df_final.shape}")
     logger.info(f"   💰 Price range: ${quality_metrics.price_range[0]:.2f} to ${quality_metrics.price_range[1]:.2f}")
     logger.info(f"   📈 Coverage: {quality_metrics.coverage_pct:.1f}%")
@@ -628,7 +627,7 @@ def create_daily_directional_labels(df: pd.DataFrame, k_days: int = 1) -> pd.Dat
     # Remove rows without forward data
     df = df.iloc[:-k_days].copy() if k_days > 0 else df.copy()
 
-    logger.info(f"✅ Daily labels created: y (direction), gross_ret_next_k (magnitude)")
+    logger.info("✅ Daily labels created: y (direction), gross_ret_next_k (magnitude)")
     logger.info(f"📊 Label distribution: {df['y'].value_counts().to_dict()}")
 
     return df.reset_index()
@@ -671,13 +670,13 @@ def prepare_ml_dataset(df: pd.DataFrame, feature_prefix: str = '_lag1') -> Tuple
     available_essential = [col for col in essential_for_ml if col in dataset.columns]
     dataset = dataset.dropna(subset=available_essential)
 
-    logger.info(f"🎯 ML dataset prepared:")
+    logger.info("🎯 ML dataset prepared:")
     logger.info(f"   📊 Shape: {dataset.shape}")
     logger.info(f"   🔢 Features: {len(feature_cols)} ({feature_cols[:5]}... + {len(feature_cols)-5} more)")
     logger.info(f"   🎯 Labels: {len(label_cols)} ({label_cols})")
     if len(dataset) > 0:
         logger.info(f"   📅 Time range: {dataset['ts'].min()} to {dataset['ts'].max()}")
     else:
-        logger.error(f"   ❌ EMPTY DATASET - check feature extraction and label creation")
+        logger.error("   ❌ EMPTY DATASET - check feature extraction and label creation")
 
     return dataset, feature_cols, label_cols

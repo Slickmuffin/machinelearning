@@ -12,36 +12,43 @@ of the RL approach are documented rather than hidden.
 
 ## Key result
 
-All numbers below come from walk-forward validation on the same historical data with
-the same splits. They are the project's documented findings.
+The reinforcement learning agent was evaluated on the first four walk-forward splits.
+On those same four splits, every simple rule based strategy beat it. The averages below
+are an apples-to-apples comparison on identical data and splits.
 
-| Strategy | Average return (7 walk-forward splits) |
+| Strategy | Average return (splits 1 to 4, same as the RL agent) |
 |---|---|
 | Trend following (ADX > 20) | +161.11% |
 | Trend following (ADX > 25) | +147.72% |
 | MA crossover (20 / 50) | +1.05% |
 | PPO / SAC reinforcement learning agent | -36.75% |
 
-The trend following rule beat the reinforcement learning agent by roughly 198
-percentage points. The lesson the project records is that added model complexity did
-not translate into performance once both approaches were measured fairly.
+Trend following (ADX > 20) beat the reinforcement learning agent by about 198 percentage
+points on the same data. The lesson the project records is that added model complexity
+did not translate into performance once both approaches were measured fairly.
 
-Walk-forward detail for trend following (ADX > 20):
+### Walk-forward detail (all seven splits)
 
-| Period | Return |
-|---|---|
-| Mar to Apr 2024 | +194.52% |
-| Jun to Jul 2024 | +168.48% |
-| Sep to Oct 2024 | +135.34% |
-| Dec 2024 to Jan 2025 | +146.09% |
-| Mar to Apr 2025 | +218.15% |
-| Jun to Jul 2025 | +80.57% |
-| Sep to Oct 2025 | +96.61% |
-| Average | +161.11% |
+Per-split returns for trend following (ADX > 20). The RL agent was only run on splits 1
+to 4, which is why the head-to-head average above uses those four splits.
 
-An initial paper-trading run of the trend following rule returned +0.78% over its
-first 15 hours. That sample is far too short to draw any conclusion from and is
-included only for transparency.
+| Split | Period | Trend following (ADX > 20) |
+|---|---|---|
+| 1 | Mar to Apr 2024 | +194.52% |
+| 2 | Jun to Jul 2024 | +168.48% |
+| 3 | Sep to Oct 2024 | +135.34% |
+| 4 | Dec 2024 to Jan 2025 | +146.09% |
+| 5 | Mar to Apr 2025 | +218.15% |
+| 6 | Jun to Jul 2025 | +80.57% |
+| 7 | Sep to Oct 2025 | +96.61% |
+| | Average (all 7) | +148.54% |
+
+The full numbers for every strategy and split are in `walkforward_comparison.csv`,
+reproduced by `test_baselines_walkforward.py`.
+
+An initial paper-trading run of the trend following bot returned +0.78% over its first
+15 hours. That sample is far too short to draw any conclusion from and is included only
+for transparency.
 
 ## The strategy that worked
 
@@ -52,12 +59,17 @@ Trend following on Bitcoin, expressed in three rules:
    long when price is above the 20 period SMA, short when it is below.
 3. If ADX is below 20 (a weak or ranging market), stay flat.
 
-The rule based logic lives in `daily_swing_trader.py` and
+The first version live bot that implements this rule is `live_trend_following_bot.py`.
+Related rule based logic is in `daily_swing_trader.py` and
 `ppo_trading_ai/daily_swing_policy.py`.
 
 ## Repository structure
 
 ```
+live_trend_following_bot.py   First version live trend-following bot (ADX + SMA)
+test_baselines_walkforward.py Walk-forward comparison of rules vs the RL agent
+walkforward_comparison.csv    Per-split results behind the key result above
+bot_config.example.json       Template config for the live bot
 ppo_trading_ai/        PPO reinforcement learning package
   ppo_agent.py           Actor-critic PPO implementation
   trading_env_senior_dev.py   Trading environment with realistic costs
@@ -110,6 +122,10 @@ from environment variables, never hard-coded.
 
 ## Usage
 
+- Reproduce the baselines vs RL comparison: `python test_baselines_walkforward.py`
+- Run the first version trend-following bot: `cp bot_config.example.json bot_config.json`,
+  add your Binance keys, then `python live_trend_following_bot.py` (test on a paper or
+  testnet account first)
 - Train the PPO agent: `python ppo_trading_ai/train_senior_dev.py`
 - Evaluate a trained model: `python evaluate_trained_model.py`
 - Run the rule based swing strategy: `python daily_swing_trader.py`

@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import gymnasium as gym
 from gymnasium import spaces
-import torch
 import logging
 from typing import Dict, Any, Tuple, Optional
 from dataclasses import dataclass
@@ -103,7 +102,7 @@ class PPOTradingEnvironment(gym.Env):
         # Initialize state
         self.reset()
         
-        logger.info(f"PPO Trading Environment (Canonical Fix) initialized:")
+        logger.info("PPO Trading Environment (Canonical Fix) initialized:")
         logger.info(f"  Data shape: {self.data.shape}")
         logger.info(f"  Price column: {self.price_column}")
         logger.info(f"  Observation space: {self.observation_space.shape}")
@@ -202,7 +201,7 @@ class PPOTradingEnvironment(gym.Env):
         else:
             data_clean = data_clean[non_zero_features]
         
-        logger.info(f"✅ Data validation complete:")
+        logger.info("✅ Data validation complete:")
         logger.info(f"  Final shape: {data_clean.shape}")
         logger.info(f"  Return std: {data_clean['return_1h'].std():.6f}")
         

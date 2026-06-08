@@ -10,8 +10,6 @@ import logging
 import torch
 import numpy as np
 import argparse
-from dataclasses import asdict
-from typing import Dict, Any
 
 # Configure logging FIRST
 logging.basicConfig(
@@ -105,7 +103,7 @@ def create_environment(data_path: str = None) -> PPOTradingEnvironmentSeniorDev:
         config = TradingConfig()
         env = PPOTradingEnvironmentSeniorDev(config=config, data_path=data_path)
         
-        logger.info(f"  ✅ Environment created successfully")
+        logger.info("  ✅ Environment created successfully")
         logger.info(f"  📊 Observation space: {env.observation_space.shape}")
         logger.info(f"  🎯 Action space: {env.action_space.shape}")
         
@@ -168,7 +166,7 @@ def train_ppo(args):
     obs_dim = env.observation_space.shape[0]
     agent = PPOAgent(obs_dim=obs_dim, config=ppo_config)
     
-    logger.info(f"🤖 PPO Agent created:")
+    logger.info("🤖 PPO Agent created:")
     logger.info(f"  📊 Network parameters: {sum(p.numel() for p in agent.network.parameters()):,}")
     logger.info(f"  📚 Learning rate: {ppo_config.learning_rate}")
     logger.info(f"  🎯 Target: {args.max_updates} updates, {args.max_steps:,} steps")

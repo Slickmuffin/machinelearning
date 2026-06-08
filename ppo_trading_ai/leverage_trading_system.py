@@ -10,12 +10,10 @@ Targeting 2-10% daily returns with up to 125x leverage through systematic risk m
 import numpy as np
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Optional, Any, Union
+from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, asdict
-from pathlib import Path
 import json
-import warnings
-from datetime import datetime, timezone
+from datetime import datetime
 
 # Import our components
 try:
@@ -44,8 +42,7 @@ try:
 except ImportError:
     # Direct imports for standalone execution
     from data_pipeline import (
-        load_prices_or_fail, extract_comprehensive_features,
-        prepare_ml_dataset, DataQualityMetrics,
+        load_prices_or_fail, DataQualityMetrics,
         resample_to_daily_bars, create_daily_features, create_daily_directional_labels
     )
     from xgboost_ensemble import (
@@ -53,17 +50,11 @@ except ImportError:
     )
     from cost_aware_policy import (
         CostAwarePolicy, PolicyConfig, PolicySignal, TradingAction,
-        create_policy_signals_batch, analyze_policy_performance
+        create_policy_signals_batch
     )
     from leverage_sizing import (
         FourClampLeverageSizer, LeverageSizingConfig, LeverageComponents,
         create_leverage_signals_batch
-    )
-    from cost_aware_policy_fixed import (
-        apply_friend_fixes, break_even_prob, ensemble_prob, decide_cost_aware
-    )
-    from daily_swing_policy import (
-        DailySwingTrader, DailySwingConfig, run_daily_backtest
     )
 
 logger = logging.getLogger(__name__)
@@ -162,7 +153,7 @@ class LeverageTradingSystem:
 
         logger.info("🚀 Leverage BTC Trading System initialized")
         logger.info(f"   📊 Data: {self.config.data_path}")
-        logger.info(f"   🎯 Target: 2-10% daily returns with up to 125x leverage")
+        logger.info("   🎯 Target: 2-10% daily returns with up to 125x leverage")
         logger.info(f"   ⏱️ Timeframe: {self.config.step_minutes}min bars")
 
     def load_and_prepare_data(self) -> Tuple[pd.DataFrame, List[str], List[str], DataQualityMetrics]:
@@ -299,7 +290,7 @@ class LeverageTradingSystem:
             mean_prediction = float(np.mean(predictions))
             prediction_std = float(np.std(predictions))
 
-            logger.info(f"📊 Pure prediction evaluation:")
+            logger.info("📊 Pure prediction evaluation:")
             logger.info(f"   🎯 OOS AUC: {oos_auc:.3f} (discriminative power)")
             logger.info(f"   📐 Calibration: {calibration_score:.3f} (lower = better)")
             logger.info(f"   📈 Mean prediction: {mean_prediction:.3f}")
@@ -332,7 +323,7 @@ class LeverageTradingSystem:
         # Run full backtest with costs
         backtest_results = self.run_backtest(test_dataset, policy_signals, leverage_signals)
 
-        logger.info(f"📊 Layer B Policy Results:")
+        logger.info("📊 Layer B Policy Results:")
         logger.info(f"   💰 Total Return: {backtest_results['total_return_pct']:.2f}%")
         logger.info(f"   📈 Sharpe Ratio: {backtest_results['sharpe_ratio']:.3f}")
         logger.info(f"   🎯 Win Rate: {backtest_results['win_rate_pct']:.1f}%")
@@ -535,7 +526,7 @@ class LeverageTradingSystem:
             'bankruptcy': equity <= 0
         }
 
-        logger.info(f"📈 Backtest complete:")
+        logger.info("📈 Backtest complete:")
         logger.info(f"   💰 Total return: {total_return*100:.2f}%")
         logger.info(f"   📊 Sharpe ratio: {sharpe_ratio:.2f}")
         logger.info(f"   📉 Max drawdown: {max_drawdown*100:.2f}%")
@@ -695,7 +686,7 @@ class LeverageTradingSystem:
         with open(results_path, 'w') as f:
             json.dump(results_dict, f, indent=2, default=str)
 
-        logger.info(f"💾 System saved:")
+        logger.info("💾 System saved:")
         logger.info(f"   🤖 Model: {model_path}")
         logger.info(f"   📊 Results: {results_path}")
 

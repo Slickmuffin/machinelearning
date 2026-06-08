@@ -8,7 +8,7 @@ Fees calculated on turnover |ΔN|, preventing 29x cost overrun.
 import gymnasium as gym
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Tuple
+from typing import Dict, Tuple
 # Fix relative import for Vertex AI
 try:
     from .canonical_config import TradingConfig

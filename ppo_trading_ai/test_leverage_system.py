@@ -8,7 +8,6 @@ import sys
 import os
 import logging
 import traceback
-from pathlib import Path
 import json
 from datetime import datetime
 
@@ -42,7 +41,7 @@ def test_data_pipeline():
             return False
 
         # Load and process data with relaxed quality gates for testing
-        from data_pipeline import validate_quality_gates, DataQualityMetrics
+        from data_pipeline import validate_quality_gates
 
         # Temporarily patch the quality gates for testing
         original_validate = validate_quality_gates
@@ -129,7 +128,6 @@ def test_policy_engine():
 
     try:
         from cost_aware_policy import CostAwarePolicy, PolicyConfig
-        import numpy as np
 
         # Create policy
         policy = CostAwarePolicy(PolicyConfig())

@@ -16,9 +16,7 @@ import pandas as pd
 import logging
 from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, field
-from pathlib import Path
 import joblib
-import warnings
 
 # XGBoost and calibration
 try:
@@ -594,7 +592,7 @@ def train_xgboost_ensemble(dataset: pd.DataFrame, feature_cols: List[str], label
 
     # Print summary
     metrics = ensemble.get_ensemble_metrics()
-    logger.info(f"🎯 Ensemble Summary:")
+    logger.info("🎯 Ensemble Summary:")
     logger.info(f"   Models trained: {metrics.get('n_models', 0)}")
     logger.info(f"   Mean CV score: {metrics.get('mean_cv_score', 0):.4f}±{metrics.get('std_cv_score', 0):.4f}")
     logger.info(f"   Mean AUC: {metrics.get('mean_auc', 0):.4f}")

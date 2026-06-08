@@ -112,7 +112,7 @@ for i in tqdm(range(10), desc="Demo Progress", unit="iter"):
 
 print(f"\n{Fore.GREEN}All tests passed!{Style.RESET_ALL}")
 print("=" * 60)
-print(f"\nYou're ready to train! Run:")
+print("\nYou're ready to train! Run:")
 print(f"{Fore.YELLOW}python train_local_with_progress.py --data <your_data.csv>{Style.RESET_ALL}")
-print(f"\nOr use the quick start script:")
+print("\nOr use the quick start script:")
 print(f"{Fore.YELLOW}./run_training.sh data/vertex_processed/btc_v2_binance_1h_20250819_093151.csv{Style.RESET_ALL}")

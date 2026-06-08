@@ -6,7 +6,6 @@ Fixed USD notional position system with pathological cost detection
 
 import numpy as np
 import torch
-import torch.nn as nn
 import logging
 import time
 from typing import List, Dict, Any
@@ -62,7 +61,7 @@ class PPOTrainerWithTripwires:
         self.cost_history = []
         self.update_count = 0
         
-        logger.info(f"✅ PPO Trainer initialized:")
+        logger.info("✅ PPO Trainer initialized:")
         logger.info(f"  Environments: {num_envs}")
         logger.info(f"  Observation dim: {obs_dim}")
         logger.info(f"  PPO epochs: {self.ppo_config.ppo_epochs}")

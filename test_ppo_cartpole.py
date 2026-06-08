@@ -16,7 +16,7 @@ def test_cartpole(max_updates=1000, rollout_steps=2048):
     print("="*80, flush=True)
     print("PPO CARTPOLE VALIDATION TEST", flush=True)
     print("="*80, flush=True)
-    print(f"Success Criterion: Episode length ≥ 475 (averaged over last 100 episodes)", flush=True)
+    print("Success Criterion: Episode length ≥ 475 (averaged over last 100 episodes)", flush=True)
     print(f"Max Updates: {max_updates}", flush=True)
     print(f"Rollout Steps: {rollout_steps}", flush=True)
     print("="*80, flush=True)
@@ -128,7 +128,7 @@ def test_cartpole(max_updates=1000, rollout_steps=2048):
     total_time = time.time() - start_time
 
     if solved:
-        print(f"TEST PASSED", flush=True)
+        print("TEST PASSED", flush=True)
         print(f"   Solved at update: {solved_at_update}/{max_updates}", flush=True)
         print(f"   Final avg episode length (last 100): {np.mean(episode_lengths[-100:]):.1f}", flush=True)
         print(f"   Total time: {total_time:.1f}s", flush=True)
@@ -136,12 +136,12 @@ def test_cartpole(max_updates=1000, rollout_steps=2048):
     else:
         if len(episode_lengths) >= 100:
             final_avg = np.mean(episode_lengths[-100:])
-            print(f"TEST FAILED", flush=True)
+            print("TEST FAILED", flush=True)
             print(f"   Did not solve in {max_updates} updates", flush=True)
             print(f"   Final avg episode length (last 100): {final_avg:.1f} (target: ≥475)", flush=True)
             print(f"   Progress: {final_avg / 475 * 100:.1f}%", flush=True)
         else:
-            print(f"TEST FAILED", flush=True)
+            print("TEST FAILED", flush=True)
             print(f"   Not enough episodes ({len(episode_lengths)}) to evaluate", flush=True)
 
     print(f"   Total episodes: {len(episode_lengths)}", flush=True)

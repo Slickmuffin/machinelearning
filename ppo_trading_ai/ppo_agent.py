@@ -12,7 +12,6 @@ import torch.nn.functional as F
 from torch.distributions import Normal
 from torch.cuda.amp import GradScaler, autocast
 import logging
-from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 import time
 
@@ -319,7 +318,7 @@ class PPOAgent:
         # Tracking
         self.total_updates = 0
         
-        logger.info(f"PPO Agent initialized:")
+        logger.info("PPO Agent initialized:")
         logger.info(f"  Device: {self.device}")
         logger.info(f"  Mixed precision: {self.config.use_amp}")
         logger.info(f"  Network parameters: {sum(p.numel() for p in self.network.parameters()):,}")
@@ -862,7 +861,7 @@ if __name__ == "__main__":
     obs = np.random.randn(obs_dim)
     action, log_prob, value = agent.get_action(obs)
     
-    print(f"✅ PPO Agent test:")
+    print("✅ PPO Agent test:")
     print(f"  Observation dim: {obs_dim}")
     print(f"  Action: {action}")
     print(f"  Log prob: {log_prob}")

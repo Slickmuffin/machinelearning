@@ -13,7 +13,7 @@ Architecture: XGBoost ensemble → cost-aware policy → leverage sizing
 import pandas as pd
 import numpy as np
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 from dataclasses import dataclass, field
 from pathlib import Path
 import warnings
@@ -171,7 +171,8 @@ def upload_dir_to_gcs(local_dir: str, gcs_uri: str):
 
     if not gcs_uri.startswith("gs://"):
         # Local artifact mode for dev runs
-        import shutil, os
+        import shutil
+        import os
         os.makedirs(gcs_uri, exist_ok=True)
         for p in pathlib.Path(local_dir).rglob("*"):
             if p.is_file():
@@ -212,9 +213,9 @@ CODE_HASH = hashlib.sha256(CODE_PATH.read_bytes()).hexdigest()[:12]
 # ML imports
 import xgboost as xgb
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
+from sklearn.metrics import roc_auc_score, log_loss
 from scipy.special import logit, expit
-from joblib import dump, load
+from joblib import dump
 import sys
 import json
 
@@ -1320,7 +1321,7 @@ if __name__ == "__main__":
                         if m['val_auc'] < min_individual_auc
                     ]
                     raise RuntimeError(
-                        f"Individual model(s) failed quality check:\n" +
+                        "Individual model(s) failed quality check:\n" +
                         "\n".join(f"  - {m}" for m in failed_models) +
                         f"\n  Min AUC: {min_auc:.3f} < {min_individual_auc}"
                     )

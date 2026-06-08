@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import gymnasium as gym
 from gymnasium import spaces
-import torch
 import logging
 from typing import Dict, Any, Tuple, Optional
 from dataclasses import dataclass
@@ -64,13 +63,13 @@ class PPOTradingEnvironment(gym.Env):
         # Initialize state
         self.reset()
         
-        logger.info(f"PPO Trading Environment (FIXED USD NOTIONAL):")
+        logger.info("PPO Trading Environment (FIXED USD NOTIONAL):")
         logger.info(f"  Data shape: {self.data.shape}")
         logger.info(f"  Price column: {self.price_column}")
         logger.info(f"  Feature columns: {len(self.feature_columns)}")
-        logger.info(f"  Action space: Continuous [-1, 1] → target leverage")
+        logger.info("  Action space: Continuous [-1, 1] → target leverage")
         logger.info(f"  Observation space: {self.observation_space.shape}")
-        logger.info(f"  Position system: USD notional N, Leverage L = |N|/E")
+        logger.info("  Position system: USD notional N, Leverage L = |N|/E")
     
     def _setup_features_and_prices(self):
         """Setup price column and deterministic feature list"""

@@ -6,18 +6,15 @@ Comprehensive evaluation with risk metrics and stress testing
 
 import numpy as np
 import pandas as pd
-import torch
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List
 import logging
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
 from ppo_env import PPOTradingEnvironment, TradingConfig
-from ppo_agent import PPOAgent, PPOConfig
+from ppo_agent import PPOAgent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

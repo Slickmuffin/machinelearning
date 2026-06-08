@@ -20,8 +20,6 @@ import sys
 import torch
 import numpy as np
 import logging
-import pandas as pd
-from typing import List
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ppo_trading_ai'))
 

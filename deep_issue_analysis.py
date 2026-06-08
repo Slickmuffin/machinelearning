@@ -3,7 +3,6 @@
 Deep analysis of the specific technical issues in job 2051893429931081728
 Focus on identifying the root cause of performance decline and training instability
 """
-import numpy as np
 import pandas as pd
 import sys
 import logging
@@ -85,14 +84,14 @@ def analyze_value_loss_explosions(df):
     
     # The mega explosion
     mega_spike = df.loc[df['value_loss'].idxmax()]
-    logger.info(f"\n🔥 MEGA EXPLOSION ANALYSIS:")
+    logger.info("\n🔥 MEGA EXPLOSION ANALYSIS:")
     logger.info(f"  Update: {mega_spike['update']}")
     logger.info(f"  Value Loss: {mega_spike['value_loss']:,.1f}")
     logger.info(f"  Magnitude: {mega_spike['value_loss'] / normal_vloss:,.0f}x normal")
     logger.info(f"  Context: Reward={mega_spike['reward']:.4f}, Policy Loss={mega_spike['policy_loss']:.4f}")
     
     # Check pattern around explosions
-    logger.info(f"\n📊 VALUE LOSS EXPLOSION PATTERNS:")
+    logger.info("\n📊 VALUE LOSS EXPLOSION PATTERNS:")
     explosion_updates = spikes['update'].tolist()
     
     for update in explosion_updates:
@@ -134,7 +133,7 @@ def analyze_episode_length_decline(df):
     logger.info(f"  Average Reward: {normal_length['reward'].mean():.4f}")
     
     # Check if short episodes correlate with high episode count
-    logger.info(f"\nEPISODE COUNT ANALYSIS:")
+    logger.info("\nEPISODE COUNT ANALYSIS:")
     high_episode_count = df[df['episodes'] > 55]
     logger.info(f"High Episode Count (>55): {len(high_episode_count)} updates")
     logger.info(f"  Average Episode Length: {high_episode_count['ep_len'].mean():.1f}")
@@ -149,7 +148,7 @@ def analyze_numerical_instability_patterns(df):
     logger.info("=================================")
     
     # Check entropy progression - high entropy might indicate loss of control
-    logger.info(f"Entropy Progression:")
+    logger.info("Entropy Progression:")
     logger.info(f"  Early (≤300): {df[df['update'] <= 300]['entropy'].mean():.3f}")
     logger.info(f"  Mid (300-700): {df[(df['update'] > 300) & (df['update'] <= 700)]['entropy'].mean():.3f}")
     logger.info(f"  Late (>700): {df[df['update'] > 700]['entropy'].mean():.3f}")
@@ -159,14 +158,14 @@ def analyze_numerical_instability_patterns(df):
         logger.info("⚠️  Very high entropy suggests policy is becoming too random")
     
     # Check policy loss patterns
-    logger.info(f"\nPolicy Loss Analysis:")
+    logger.info("\nPolicy Loss Analysis:")
     policy_spikes = df[df['policy_loss'] > 3.0]
     logger.info(f"  Policy Loss Spikes (>3.0): {len(policy_spikes)} updates")
     for idx, row in policy_spikes.iterrows():
         logger.info(f"    Update {row['update']}: {row['policy_loss']:.4f}")
     
     # Check for loss correlation patterns
-    logger.info(f"\nLoss Correlation Analysis:")
+    logger.info("\nLoss Correlation Analysis:")
     high_vloss_periods = df[df['value_loss'] > 500]
     logger.info(f"  High Value Loss Periods: {len(high_vloss_periods)} updates")
     logger.info(f"  Average Reward during high VLoss: {high_vloss_periods['reward'].mean():.4f}")
@@ -209,7 +208,7 @@ def identify_root_cause(df):
         logger.info(f"🌪️  EVIDENCE: Entropy exploded to {df['entropy'].iloc[-1]:.3f}")
     
     # Diagnosis
-    logger.info(f"\n🔬 DIAGNOSIS:")
+    logger.info("\n🔬 DIAGNOSIS:")
     
     if "Catastrophic Value Function Collapse" in evidence:
         logger.info("PRIMARY CAUSE: Value Function Numerical Instability")

@@ -3,9 +3,7 @@
 Analyze the training performance from job 2051893429931081728 to understand what the agent learned.
 This analyzes the training logs to extract learning patterns and identify potential issues.
 """
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import sys
 import logging
 
@@ -144,7 +142,7 @@ def analyze_learning_progression(df):
     worst_reward = df['reward'].min()
     mean_reward = df['reward'].mean()
     
-    logger.info(f"\n📈 REWARD PROGRESSION:")
+    logger.info("\n📈 REWARD PROGRESSION:")
     logger.info(f"  Initial Reward (Update 10): {initial_reward:.4f}")
     logger.info(f"  Final Reward (Update 1020): {final_reward:.4f}")
     logger.info(f"  Peak Reward: {peak_reward:.4f}")
@@ -157,7 +155,7 @@ def analyze_learning_progression(df):
     best_period_idx = df['reward_ma'].idxmax()
     best_period = df.loc[max(0, best_period_idx-5):best_period_idx+5]
     
-    logger.info(f"\n🏆 BEST PERFORMANCE PERIOD:")
+    logger.info("\n🏆 BEST PERFORMANCE PERIOD:")
     logger.info(f"  Around Update: {df.loc[best_period_idx, 'update']}")
     logger.info(f"  Best 10-update average: {df.loc[best_period_idx, 'reward_ma']:.4f}")
     logger.info(f"  Updates {best_period['update'].min()}-{best_period['update'].max()}: {best_period['reward'].tolist()}")
@@ -167,7 +165,7 @@ def analyze_learning_progression(df):
     mid_phase = df[(df['update'] > 200) & (df['update'] <= 600)]['reward'].mean() 
     late_phase = df[df['update'] > 600]['reward'].mean()
     
-    logger.info(f"\n📊 LEARNING PHASES:")
+    logger.info("\n📊 LEARNING PHASES:")
     logger.info(f"  Early Phase (Updates 10-200): {early_phase:.4f} avg reward")
     logger.info(f"  Mid Phase (Updates 200-600): {mid_phase:.4f} avg reward")
     logger.info(f"  Late Phase (Updates 600-1020): {late_phase:.4f} avg reward")
@@ -176,25 +174,25 @@ def analyze_learning_progression(df):
     positive_rewards = df[df['reward'] > 0]
     negative_rewards = df[df['reward'] < 0]
     
-    logger.info(f"\n✅ POSITIVE PERFORMANCE:")
+    logger.info("\n✅ POSITIVE PERFORMANCE:")
     logger.info(f"  Positive Reward Updates: {len(positive_rewards)}/{len(df)} ({len(positive_rewards)/len(df)*100:.1f}%)")
     logger.info(f"  Average Positive Reward: {positive_rewards['reward'].mean():.4f}")
     logger.info(f"  Best Positive Streaks: {find_streaks(df['reward'] > 0)}")
     
-    logger.info(f"\n❌ NEGATIVE PERFORMANCE:")
+    logger.info("\n❌ NEGATIVE PERFORMANCE:")
     logger.info(f"  Negative Reward Updates: {len(negative_rewards)}/{len(df)} ({len(negative_rewards)/len(df)*100:.1f}%)")
     logger.info(f"  Average Negative Reward: {negative_rewards['reward'].mean():.4f}")
     
     # Episode length analysis
     avg_ep_len = df['ep_len'].mean()
-    logger.info(f"\n⏱️ EPISODE ANALYSIS:")
+    logger.info("\n⏱️ EPISODE ANALYSIS:")
     logger.info(f"  Average Episode Length: {avg_ep_len:.1f} steps")
     logger.info(f"  Episode Length Range: {df['ep_len'].min():.1f} - {df['ep_len'].max():.1f} steps")
     logger.info(f"  Short Episodes (<5 steps): {(df['ep_len'] < 5).sum()} updates")
     logger.info(f"  Long Episodes (>6 steps): {(df['ep_len'] > 6).sum()} updates")
     
     # Entropy analysis (exploration)
-    logger.info(f"\n🔍 EXPLORATION ANALYSIS:")
+    logger.info("\n🔍 EXPLORATION ANALYSIS:")
     logger.info(f"  Initial Entropy: {df['entropy'].iloc[0]:.4f}")
     logger.info(f"  Final Entropy: {df['entropy'].iloc[-1]:.4f}")
     logger.info(f"  Entropy Increase: {df['entropy'].iloc[-1] - df['entropy'].iloc[0]:+.4f}")

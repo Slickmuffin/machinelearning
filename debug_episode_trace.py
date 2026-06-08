@@ -5,7 +5,6 @@ Debug script to trace exactly what's happening in Solution 2 evaluation.
 
 import os
 import sys
-import torch
 import numpy as np
 import pandas as pd
 
@@ -97,14 +96,14 @@ def trace_episode():
     price_change_pct = (end_price / df['close'].iloc[episode_start] - 1) * 100
 
     print(f"\n{'='*80}")
-    print(f"EPISODE SUMMARY")
+    print("EPISODE SUMMARY")
     print(f"{'='*80}")
     print(f"Steps: {steps}")
     print(f"Trades: {trades}")
     print(f"Start Price: ${df['close'].iloc[episode_start]:,.2f}")
     print(f"End Price: ${end_price:,.2f}")
     print(f"Price Change: {price_change_pct:+.2f}%")
-    print(f"\nInitial Equity: $10,000")
+    print("\nInitial Equity: $10,000")
     print(f"Final Equity: ${final_equity:,.2f}")
     print(f"PnL: {pnl_pct:+.2f}%")
     print(f"\nReturn (log-equity): {episode_return:+.6f}")
@@ -112,14 +111,14 @@ def trace_episode():
     # Check for bugs
     if abs(price_change_pct) < 1.0 and abs(pnl_pct) > 100:
         print(f"\n{'='*80}")
-        print(f"BUG DETECTED!")
+        print("BUG DETECTED!")
         print(f"{'='*80}")
         print(f"Price barely moved ({price_change_pct:+.2f}%) but PnL is {pnl_pct:+.2f}%")
-        print(f"This is mathematically impossible with realistic leverage.")
+        print("This is mathematically impossible with realistic leverage.")
 
         # Analyze equity trace
         equity_array = np.array(equity_trace)
-        print(f"\nEquity Statistics:")
+        print("\nEquity Statistics:")
         print(f"  Min: ${equity_array.min():,.2f}")
         print(f"  Max: ${equity_array.max():,.2f}")
         print(f"  Mean: ${equity_array.mean():,.2f}")

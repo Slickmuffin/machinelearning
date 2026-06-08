@@ -57,7 +57,12 @@ pip.conf
 kubeconfig
 *service-account*.json
 *credentials*.json
+bot_config.json
+!bot_config.example.json
 
 # Local tooling state
 .claude/
 .auto_memory_state.json
+
+# Tooling cache
+.ruff_cache/

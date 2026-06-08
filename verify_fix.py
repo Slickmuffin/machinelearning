@@ -35,7 +35,7 @@ start_price = df['close'].iloc[start_idx]
 end_price = df['close'].iloc[end_idx]
 price_change_pct = (end_price / start_price - 1) * 100
 
-print(f"\nTest Episode:")
+print("\nTest Episode:")
 print(f"Start price: ${start_price:,.2f}")
 print(f"End price: ${end_price:,.2f}")
 print(f"Price change: {price_change_pct:+.2f}%")
@@ -56,7 +56,7 @@ for step in range(200):
 final_equity = equity_trace[-1]
 pnl_pct = (final_equity - 10000) / 10000 * 100
 
-print(f"\nResults:")
+print("\nResults:")
 print(f"Final equity: ${final_equity:,.2f}")
 print(f"PnL: {pnl_pct:+.2f}%")
 
@@ -68,7 +68,7 @@ print(f"\nExpected PnL (3x leverage): {expected_pnl_pct:+.2f}%")
 position_changes = np.diff(position_trace)
 unique_positions = len(set(np.round(position_trace, 4)))
 
-print(f"\nPosition stability:")
+print("\nPosition stability:")
 print(f"Unique positions: {unique_positions} (should be ~1 if not compounding)")
 print(f"Position range: {min(position_trace):.4f} to {max(position_trace):.4f} BTC")
 
@@ -78,6 +78,6 @@ if unique_positions > 10:
 elif abs(pnl_pct - expected_pnl_pct) > 50:
     print(f"\nWARNING: PnL ({pnl_pct:+.2f}%) differs significantly from expected ({expected_pnl_pct:+.2f}%)!")
 else:
-    print(f"\nSUCCESS: Fix works! PnL is realistic and position doesn't compound.")
+    print("\nSUCCESS: Fix works! PnL is realistic and position doesn't compound.")
     print(f"Difference from expected: {abs(pnl_pct - expected_pnl_pct):.2f}% (within tolerance)")
 

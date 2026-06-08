@@ -15,10 +15,8 @@ Final leverage = min(125, L_vol, L_kelly, L_liq, L_var)
 import numpy as np
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from enum import Enum
-import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -556,7 +554,7 @@ if __name__ == "__main__":
         current_equity=10000.0
     )
 
-    logger.info(f"🎯 Test leverage calculation:")
+    logger.info("🎯 Test leverage calculation:")
     logger.info(f"   Final leverage: {components.final_leverage:.2f}x")
     logger.info(f"   Active constraint: {components.active_constraint}")
     logger.info(f"   Reasoning: {components.reasoning}")

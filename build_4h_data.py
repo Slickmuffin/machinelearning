@@ -10,9 +10,6 @@ import numpy as np
 import logging
 from pathlib import Path
 import requests
-import json
-from datetime import datetime, timezone
-import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

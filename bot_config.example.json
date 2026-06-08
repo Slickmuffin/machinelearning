@@ -1,0 +1,10 @@
+{
+  "api_key": "YOUR_BINANCE_API_KEY",
+  "api_secret": "YOUR_BINANCE_API_SECRET",
+  "symbol": "BTC/USDT",
+  "timeframe": "1h",
+  "adx_threshold": 20,
+  "leverage": 2.0,
+  "max_position_size": 0.9,
+  "check_interval": 3600
+}

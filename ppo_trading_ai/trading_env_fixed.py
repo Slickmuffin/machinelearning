@@ -90,13 +90,13 @@ class FixedTradingEnvironment:
             'shape': (self.config.sequence_length, self.obs_dim + 4)
         })()
 
-        print(f"Fixed Trading Environment initialized:")
+        print("Fixed Trading Environment initialized:")
         print(f"  Total timesteps: {self.total_steps}")
         print(f"  Features: {self.obs_dim}")
         print(f"  Sequence length: {self.config.sequence_length}")
         print(f"  Episode length: {self.episode_length}")
         print(f"  Episode overlap: {self.config.episode_overlap}")
-        print(f"  FIX APPLIED: Position sizing uses INITIAL balance (no compounding)")
+        print("  FIX APPLIED: Position sizing uses INITIAL balance (no compounding)")
 
     def _calculate_features(self, df: pd.DataFrame) -> np.ndarray:
         """Calculate market features"""

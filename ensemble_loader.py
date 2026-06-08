@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     # Show info
     info = predictor.info()
-    print(f"\n📊 Ensemble Info:")
+    print("\n📊 Ensemble Info:")
     for k, v in info.items():
         print(f"   {k}: {v}")
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     if args.test_csv:
         df = pd.read_csv(args.test_csv)
         probs = predictor.predict_proba(df)
-        print(f"\n🎯 Test Predictions:")
+        print("\n🎯 Test Predictions:")
         print(f"   Shape: {probs.shape}")
         print(f"   Mean prob: {probs.mean():.3f}")
         print(f"   Std prob: {probs.std():.3f}")

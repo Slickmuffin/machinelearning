@@ -4,16 +4,12 @@ GPU-Optimized PPO Training for Vertex AI
 Vectorized environments with proper GPU utilization and risk-aware training
 """
 
-import os
-import sys
 import time
 import logging
 import numpy as np
 import torch
 import subprocess
-from typing import Dict, Any
 import argparse
-from dataclasses import asdict
 
 # Import our modules
 from ppo_env import PPOTradingEnvironment, VectorizedTradingEnv, TradingConfig
@@ -134,7 +130,7 @@ def train_ppo(args):
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     
-    logger.info(f"Environment setup:")
+    logger.info("Environment setup:")
     logger.info(f"  Observation dim: {obs_dim}")
     logger.info(f"  Action dim: {action_dim}")
     logger.info(f"  Action space: Continuous [{env.action_space.low[0]:.1f}, {env.action_space.high[0]:.1f}]")

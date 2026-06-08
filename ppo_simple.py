@@ -164,7 +164,7 @@ class SimplePPOAgent:
         # Metrics
         self.total_updates = 0
 
-        logger.info(f"SimplePPO Agent initialized:")
+        logger.info("SimplePPO Agent initialized:")
         logger.info(f"  Obs dim: {obs_dim}, Action dim: {action_dim}")
         logger.info(f"  Continuous: {continuous}")
         logger.info(f"  Device: {self.device}")

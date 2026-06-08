@@ -13,17 +13,10 @@ ARCHITECTURAL FIXES APPLIED:
 - Fixed GAE bootstrapping
 """
 
-import os
-import sys
-import json
 import time
 import logging
-import traceback
 import numpy as np
 import pandas as pd
-import random
-from collections import deque
-from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
@@ -33,11 +26,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
-import torch.multiprocessing as mp
-from torch.cuda.amp import GradScaler, autocast
-from torch.nn.utils.rnn import pad_sequence
+from torch.cuda.amp import autocast
 import subprocess
-import psutil
 
 # Import the architectural-fix PPO agent
 from ppo_agent import PPOAgent, PPOConfig
@@ -117,7 +107,7 @@ class ActorCriticNetwork(nn.Module):
         
         # Check for NaN/Inf in logits
         if torch.isnan(logits).any() or torch.isinf(logits).any():
-            logger.error(f"🚨 NaN/Inf detected in logits! Replacing with zeros")
+            logger.error("🚨 NaN/Inf detected in logits! Replacing with zeros")
             logits = torch.zeros_like(logits)
         
         # Critic output: state value
@@ -125,7 +115,7 @@ class ActorCriticNetwork(nn.Module):
         
         # Check for NaN/Inf in state values
         if torch.isnan(state_value).any() or torch.isinf(state_value).any():
-            logger.error(f"🚨 NaN/Inf detected in state_value! Replacing with zeros")
+            logger.error("🚨 NaN/Inf detected in state_value! Replacing with zeros")
             state_value = torch.zeros_like(state_value)
         
         return logits, state_value
@@ -522,7 +512,7 @@ class PPOTradingAgent:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
             
-            logger.info(f"✅ CUDA Optimizations enabled: cuDNN benchmark, TF32")
+            logger.info("✅ CUDA Optimizations enabled: cuDNN benchmark, TF32")
         
         self.state_size = state_size
         self.action_size = action_size
@@ -563,7 +553,7 @@ class PPOTradingAgent:
         logger.info(f"PPO Agent initialized with {sum(p.numel() for p in self.ac_network.parameters()):,} parameters")
         logger.info(f"✅ Model device: {model_device}")
         logger.info(f"✅ Model on GPU: {next(self.ac_network.parameters()).is_cuda}")
-        logger.info(f"🎯 PPO HYPERPARAMETERS:")
+        logger.info("🎯 PPO HYPERPARAMETERS:")
         logger.info(f"   - Learning Rate: {lr}")
         logger.info(f"   - Clip Epsilon: {self.clip_epsilon}")
         logger.info(f"   - PPO Epochs: {self.ppo_epochs}")
@@ -986,7 +976,7 @@ def train_ppo_trading_ai():
     # Final performance summary
     logger.info("="*80)
     logger.info("🏁 GPU-OPTIMIZED PPO TRAINING COMPLETED!")
-    logger.info(f"📊 Performance Summary:")
+    logger.info("📊 Performance Summary:")
     logger.info(f"   Total Time: {total_time:.1f}s ({total_time/60:.1f} minutes)")
     logger.info(f"   Rollout Time: {total_rollout_time:.1f}s ({(total_rollout_time/total_time)*100:.1f}%)")
     logger.info(f"   Update Time: {total_update_time:.1f}s ({(total_update_time/total_time)*100:.1f}%)")
@@ -1023,7 +1013,7 @@ def train_ppo_trading_ai():
         bucket = client.bucket('YOUR_GCP_PROJECT-ml-trading-central')
         blob = bucket.blob('ppo-trading-ai/model/ppo_trading_model.pth')
         blob.upload_from_filename(local_path)
-        logger.info(f"✅ PPO model uploaded to cloud storage")
+        logger.info("✅ PPO model uploaded to cloud storage")
     except Exception as e:
         logger.info(f"⚠️ Upload failed: {e}")
     
