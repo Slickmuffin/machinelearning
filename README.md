@@ -114,9 +114,9 @@ pip install -r requirements.txt
 cp .env.example .env   # fill in only if you connect a live data or trading account
 ```
 
-No API keys are required to run the included backtests and training on the bundled
-public data. Keys are only needed for live or exchange-connected use and are read
-from environment variables, never hard-coded.
+No API keys are required to run the backtests or training once the public data is in
+place (see Data and models for how to regenerate it). Keys are only needed for live or
+exchange-connected use and are read from environment variables, never hard-coded.
 
 ## Usage
 
