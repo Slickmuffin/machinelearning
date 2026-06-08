@@ -78,7 +78,6 @@ ppo_trading_ai/        PPO reinforcement learning package
   train_senior_dev.py    Training entry point
   evaluate_ppo.py        Evaluation
   leverage_sizing.py     Position sizing helpers
-checkpoints*/          Trained model weights
 daily_swing_trader.py  Rule based trend / swing trader
 ppo_simple.py          Minimal PPO reference
 evaluate_trained_model.py   Model evaluation utility
@@ -133,12 +132,18 @@ from environment variables, never hard-coded.
 Cloud training was run on Google Cloud Vertex AI; the build and job definitions are in
 `cloudbuild.yaml` and `ppo_trading_ai/`.
 
-## Data
+## Data and models
 
-The datasets are not committed to this repository. They are public Bitcoin market data
-(OHLCV candles plus engineered features such as technical indicators, funding rate, open
-interest, long/short ratios, and the Fear and Greed index) and are kept out of git to keep
-the repository light. The `data/` directory is gitignored.
+Neither the datasets nor the trained model weights are committed to this repository, to keep
+it light. Both regenerate from public Bitcoin market data.
+
+The datasets are public Bitcoin market data (OHLCV candles plus engineered features such as
+technical indicators, funding rate, open interest, long/short ratios, and the Fear and Greed
+index). The `data/` directory is gitignored.
+
+Trained model checkpoints (the `.pt` and `.pth` files) are gitignored as well. They
+regenerate by running the training pipeline (`python ppo_trading_ai/train_senior_dev.py`) on
+the data described below.
 
 Regenerate locally from public sources:
 - `build_4h_data.py` fetches Bitcoin klines from the public Binance API and builds the

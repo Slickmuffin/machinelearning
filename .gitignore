@@ -8,11 +8,11 @@ __pycache__/
 dist/
 build/
 
-# Training artifacts - keep only final model
+# Model weights and checkpoints - regenerate from training, never commit
+*.pt
+*.pth
+checkpoints/
 checkpoints_*/
-!checkpoints_fixed_lstm/
-checkpoints_fixed_lstm/checkpoint_*.pt
-!checkpoints_fixed_lstm/final_model.pt
 
 # Logs - keep only the clean training log
 *.log
